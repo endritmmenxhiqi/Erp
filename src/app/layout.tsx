@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+// 1. Importet e Providers dhe UI (gjithmonë në fillim)
+import { ThemeProvider } from "@/components/theme-provider";
+import { LanguageProvider } from "@/components/language-provider";
+import { AuthProvider } from "@/components/auth-provider";
+import { Toaster } from "@/components/ui/sonner";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,11 +22,6 @@ export const metadata: Metadata = {
   title: "Anti-Gravity AI-ERP",
   description: "Next Generation AI-ERP System",
 };
-
-import { ThemeProvider } from "@/components/theme-provider";
-import { LanguageProvider } from "@/components/language-provider";
-import { AuthProvider } from "@/components/auth-provider";
-import { Toaster } from "@/components/ui/sonner";
 
 export default function RootLayout({
   children,
@@ -41,7 +42,8 @@ export default function RootLayout({
           <AuthProvider>
             <LanguageProvider>
               {children}
-              <Toaster />
+              {/* Toaster do të shfaqë njoftimet (toasts) në të gjitha faqet */}
+              <Toaster position="top-center" richColors />
             </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>

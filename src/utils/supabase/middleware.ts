@@ -27,43 +27,53 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/admin') || request.nextUrl.pathname.startsWith('/dashboard')
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register') || request.nextUrl.pathname.startsWith('/forgot-password')
-  
+  const pathname = request.nextUrl.pathname
+
+  // 1. Defino rrugët e rëndësishme
+  const isAuthCallback = pathname.startsWith('/auth')
+  const isUpdatePasswordRoute = pathname.startsWith('/update-password')
+  const isProtectedRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard')
+  const isAuthFormRoute = pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/forgot-password')
+
+  // 2. LEJO AUTH CALLBACK: Ky rresht rregullon gabimin "auth-code-error"
+  // Lejon Supabase-in të shkëmbejë kodin nga emaili me një sesion real
+  if (isAuthCallback) {
+    return supabaseResponse
+  }
+
+  // 3. MBROJTJA: Nëse s'ka user dhe tenton Dashboard, dërgoje në Login
   if (!user && isProtectedRoute) {
-    // no user trying to access protected route -> redirect to login
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthRoute) {
-    // authenticated user trying to access login/register -> redirect to dashboard
+  // 4. PAS LOGINIT: Nëse ka user dhe tenton Login/Register, dërgoje në Dashboard
+  // POR: Mos e blloko nëse është duke ndryshuar fjalëkalimin (update-password)
+  if (user && isAuthFormRoute && !isUpdatePasswordRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // Handle protected routes based on roles
-  if (user && isProtectedRoute) {
+  // 5. ROLE-BASED ACCESS (ADMIN)
+  if (user && pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-    
-    if (request.nextUrl.pathname.startsWith('/admin') && profile?.role !== 'admin') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
     }
   }
 

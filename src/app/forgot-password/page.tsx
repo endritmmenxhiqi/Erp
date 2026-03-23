@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
       })
 
       if (error) {
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
               <FormField
                 control={form.control}
                 name="email"
-                render={({ field }) => (
+                render={({ field }: { field: any }) => (
                   <FormItem>
                     <FormLabel>{t("work_email")}</FormLabel>
                     <FormControl>

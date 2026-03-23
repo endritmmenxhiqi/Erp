@@ -8,13 +8,23 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const {
+      data: { user: u },
+    } = await supabase.auth.getUser()
+    user = u
+  } catch (err) {
+    // If fetch fails or auth call errors, redirect to login
+    // so the app doesn't crash with an unhandled error in auth-js
+    // and surface a clearer message in server logs.
+    // eslint-disable-next-line no-console
+    console.error('Supabase auth.getUser error:', err)
+    return redirect('/login')
+  }
 
   if (!user) {
-    return redirect("/login")
+    return redirect('/login')
   }
 
   const { data: profile } = await supabase
