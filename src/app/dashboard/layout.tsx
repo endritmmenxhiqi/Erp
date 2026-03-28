@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
+import { ChatDB } from "@/components/ChatDB"
 
 export default async function DashboardLayout({
   children,
@@ -51,6 +52,7 @@ export default async function DashboardLayout({
         <div className="p-8 sm:p-12 max-w-7xl mx-auto">
           {children}
         </div>
+        <ChatDB />
       </main>
     </div>
   )
