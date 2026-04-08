@@ -1,71 +1,112 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, X, Bot, User, Loader2, Database } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Bot, Database, Loader2, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
+const MAX_CHAT_LENGTH = 500;
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  data?: any;
-  sql?: string;
+  data?: Record<string, unknown>[] | null;
+  sql?: string | null;
 }
 
 export function ChatDB() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Përshëndetje! Unë jam asistenti juaj inteligjent. Më pyet diçka rreth bazës së të dhënave tuaja (p.sh. "Sa është totali i shitjeve sot?").' }
+    {
+      role: 'assistant',
+      content:
+        'Pershendetje! Une jam asistenti juaj inteligjent. Me pyet dicka rreth bazes se te dhenave tuaja, p.sh. "Sa eshte totali i shitjeve sot?".',
+    },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [lastPrompt, setLastPrompt] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (rawMessage?: string) => {
+    if (isLoading) return;
 
-    const userMessage = input.trim();
+    const userMessage = (rawMessage ?? input).trim();
+    if (!userMessage) {
+      setErrorMessage('Shkruani nje pyetje para se te dergoni mesazhin.');
+      return;
+    }
+
+    if (userMessage.length > MAX_CHAT_LENGTH) {
+      setErrorMessage(`Pyetja eshte shume e gjate. Kufiri eshte ${MAX_CHAT_LENGTH} karaktere.`);
+      return;
+    }
+
+    setErrorMessage('');
+    setLastPrompt(userMessage);
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch('/api/chat-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMessage }),
+        signal: controller.signal,
       });
 
-      const result = await response.json();
+      window.clearTimeout(timeoutId);
 
-      if (result.error) {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: `Gabim teknik: ${result.error}`,
-          sql: result.sql 
-        }]);
-      } else {
-        const content = result.content || (result.data ? "Gjeta këto të dhëna:" : "Nuk kam një përgjigje për këtë.");
-        
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content,
-          data: result.data,
-          sql: result.sql
-        }]);
+      let result: {
+        error?: string;
+        content?: string;
+        data?: Record<string, unknown>[];
+        sql?: string;
+      } | null = null;
+
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error('Serveri ktheu nje pergjigje te pavlefshme.');
       }
+
+      if (!response.ok || result?.error) {
+        throw new Error(result?.error || 'Kerkesa deshtoi. Ju lutem provoni perseri.');
+      }
+
+      const content =
+        result.content || (Array.isArray(result.data) && result.data.length > 0 ? 'Gjeta keto te dhena:' : 'Nuk kam nje pergjigje per kete.');
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content,
+          data: result.data ?? null,
+          sql: result.sql ?? null,
+        },
+      ]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Ndodhi një gabim gjatë komunikimit me serverin.' }]);
+      const message =
+        error instanceof DOMException && error.name === 'AbortError'
+          ? 'Kerkesa po zgjat shume. Kontrolloni rrjetin dhe provoni perseri.'
+          : error instanceof Error
+            ? error.message
+            : 'Ndodhi nje gabim gjate komunikimit me serverin.';
+
+      setErrorMessage(message);
+      setMessages((prev) => [...prev, { role: 'assistant', content: message }]);
     } finally {
       setIsLoading(false);
     }
@@ -74,88 +115,126 @@ export function ChatDB() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {isOpen && (
-        <Card className="w-[380px] h-[500px] mb-4 flex flex-col shadow-2xl border-primary/20 bg-background/95 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300">
-          <CardHeader className="p-4 border-b bg-primary/5 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Bot className="w-4 h-4 text-primary" />
+        <Card className="mb-4 flex h-[500px] w-[380px] flex-col border-primary/20 bg-background/95 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300">
+          <CardHeader className="flex flex-row items-center justify-between border-b bg-primary/5 p-4">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Bot className="h-4 w-4 text-primary" />
               Asistenti Inteligjent (Chat with DB)
             </CardTitle>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </Button>
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((m, i) => (
-              <div key={i} className={cn("flex flex-col", m.role === 'user' ? "items-end" : "items-start")}>
-                <div className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-2 text-sm",
-                  m.role === 'user' 
-                    ? "bg-primary text-primary-foreground rounded-tr-none" 
-                    : "bg-muted text-muted-foreground rounded-tl-none"
-                )}>
-                  <p>{m.content}</p>
-                  {m.data && Array.isArray(m.data) && m.data.length > 0 && (
-                    <div className="mt-2 overflow-x-auto text-[10px] bg-black/10 p-2 rounded">
+          <CardContent className="flex-1 space-y-4 overflow-y-auto p-4">
+            {errorMessage && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <p>{errorMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={cn('flex flex-col', message.role === 'user' ? 'items-end' : 'items-start')}>
+                <div
+                  className={cn(
+                    'max-w-[85%] rounded-2xl px-4 py-2 text-sm',
+                    message.role === 'user'
+                      ? 'rounded-tr-none bg-primary text-primary-foreground'
+                      : 'rounded-tl-none bg-muted text-muted-foreground'
+                  )}
+                >
+                  <p>{message.content}</p>
+                  {Array.isArray(message.data) && message.data.length > 0 && (
+                    <div className="mt-2 overflow-x-auto rounded bg-black/10 p-2 text-[10px]">
                       <table className="w-full text-left">
                         <thead>
                           <tr>
-                            {Object.keys(m.data[0]).map(k => <th key={k} className="pr-2 font-bold">{k}</th>)}
+                            {Object.keys(message.data[0]).map((key) => (
+                              <th key={key} className="pr-2 font-bold">
+                                {key}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {m.data.slice(0, 3).map((row, ri) => (
-                            <tr key={ri}>
-                              {Object.values(row).map((v: any, vi) => <td key={vi} className="pr-2">{String(v)}</td>)}
+                          {message.data.slice(0, 3).map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {Object.values(row).map((value, valueIndex) => (
+                                <td key={valueIndex} className="pr-2">
+                                  {String(value)}
+                                </td>
+                              ))}
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                      {m.data.length > 3 && <p className="mt-1 opacity-50">+ edhe {m.data.length - 3} tjerë...</p>}
+                      {message.data.length > 3 && <p className="mt-1 opacity-50">+ edhe {message.data.length - 3} te tjera...</p>}
                     </div>
                   )}
                 </div>
-                {m.role === 'assistant' && m.sql && (
-                   <div className="mt-1 flex flex-col gap-1">
-                     <span className="text-[9px] text-muted-foreground flex items-center gap-1 opacity-70">
-                       <Database className="w-2 h-2" /> SQL e gjeneruar:
-                     </span>
-                     <code className="text-[8px] bg-black/5 p-1 rounded font-mono break-all opacity-50 hover:opacity-100 transition-opacity">
-                       {m.sql}
-                     </code>
-                   </div>
+
+                {message.role === 'assistant' && message.sql && (
+                  <div className="mt-1 flex flex-col gap-1">
+                    <span className="flex items-center gap-1 text-[9px] text-muted-foreground opacity-70">
+                      <Database className="h-2 w-2" /> SQL e gjeneruar:
+                    </span>
+                    <code className="break-all rounded bg-black/5 p-1 font-mono text-[8px] opacity-50 transition-opacity hover:opacity-100">
+                      {message.sql}
+                    </code>
+                  </div>
                 )}
               </div>
             ))}
+
             {isLoading && (
-              <div className="flex items-center gap-2 text-muted-foreground text-xs italic">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Duke analizuar dhënat...
+              <div className="flex items-center gap-2 text-xs italic text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Duke analizuar te dhenat...
               </div>
             )}
             <div ref={messagesEndRef} />
           </CardContent>
-          <div className="p-4 border-t bg-background">
+          <div className="border-t bg-background p-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Shkruaj pyetjen këtu..."
+                placeholder="Shkruaj pyetjen ketu..."
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onChange={(event) => {
+                  setInput(event.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    void sendMessage();
+                  }
+                }}
                 className="flex-1"
+                maxLength={MAX_CHAT_LENGTH}
               />
-              <Button size="icon" onClick={handleSend} disabled={isLoading || !input.trim()}>
-                <Send className="w-4 h-4" />
+              <Button size="icon" onClick={() => void sendMessage()} disabled={isLoading || !input.trim()}>
+                <Send className="h-4 w-4" />
               </Button>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{input.length}/{MAX_CHAT_LENGTH} karaktere</span>
+              {lastPrompt && !isLoading && (
+                <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => void sendMessage(lastPrompt)}>
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Provo perseri
+                </Button>
+              )}
             </div>
           </div>
         </Card>
       )}
-      
-      <Button 
-        size="icon" 
+
+      <Button
+        size="icon"
         className={cn(
-          "h-14 w-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95",
-          isOpen ? "bg-destructive text-destructive-foreground rotate-90" : "bg-primary text-primary-foreground"
+          'h-14 w-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95',
+          isOpen ? 'rotate-90 bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'
         )}
         onClick={() => setIsOpen(!isOpen)}
       >
