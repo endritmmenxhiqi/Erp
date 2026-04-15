@@ -9,6 +9,7 @@ import { createClient } from "@/utils/supabase/client"
 export default function DashboardPage() {
   const { t } = useTranslation()
   const [profile, setProfile] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
@@ -22,9 +23,26 @@ export default function DashboardPage() {
           .single()
         setProfile(data)
       }
+      setIsLoading(false)
     }
     load()
   }, [])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-12 animate-in fade-in duration-500">
+        <div className="flex flex-col space-y-2">
+          <div className="h-4 w-32 bg-primary/10 rounded-full animate-pulse" />
+          <div className="h-10 w-64 bg-muted/50 rounded-xl animate-pulse" />
+          <div className="h-4 w-80 bg-muted/30 rounded-full animate-pulse" />
+        </div>
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="col-span-1 lg:col-span-2 h-64 rounded-3xl bg-muted/20 border border-border animate-pulse" />
+          <div className="h-64 rounded-3xl bg-muted/20 border border-border animate-pulse" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-12">

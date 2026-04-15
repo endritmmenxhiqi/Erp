@@ -25,8 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-const MAX_INVOICE_LENGTH = 80
-const MAX_ITEMS = 25
+import { MAX_INVOICE_LENGTH, MAX_ITEMS } from "@/lib/constants"
 
 const saleSchema = z.object({
   invoice_num: z.string().trim().min(1, "Numri i fatures eshte i detyrueshem").max(MAX_INVOICE_LENGTH, `Maksimumi ${MAX_INVOICE_LENGTH} karaktere`),
@@ -128,7 +127,7 @@ export default function SalesPage() {
         }
       }
 
-      toast.success(t("auth.success_register"))
+      toast.success("Shitja u regjistrua me sukses!")
       form.reset({
         invoice_num: "",
         date: new Date().toISOString().split("T")[0],
@@ -375,9 +374,9 @@ export default function SalesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowVatModal(false)}>{t("continue")}</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setShowVatModal(false)}>Kthehu</AlertDialogCancel>
             <AlertDialogAction onClick={() => pendingValues && void processSale(pendingValues)} disabled={isLoading} className="bg-primary text-white">
-              {isLoading ? <Spinner className="mr-2" /> : t("continue")}
+              {isLoading ? <Spinner className="mr-2" /> : "Konfirmo"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

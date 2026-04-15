@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Spinner } from "@/components/spinner"
 import Link from "next/link"
-import { ShieldCheck, ChevronRight, Rocket } from "lucide-react"
+import { ShieldCheck, ChevronRight, Rocket, AlertCircle } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useTranslation } from "@/components/language-provider"
@@ -22,9 +23,11 @@ const loginSchema = z.object({
   password: z.string().min(6),
 })
 
-export default function LoginPage() {
+function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const authError = searchParams.get('error')
   const supabase = createClient()
   const { t } = useTranslation()
 
@@ -89,6 +92,12 @@ export default function LoginPage() {
         </div>
 
         <div className="glass-card p-8 rounded-3xl border border-border mt-0 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+          {authError === 'auth-code-error' && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>Linku i emails ka skaduar ose është i pavlefshëm. Ju lutem kërkoni një link të ri.</p>
+            </div>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
@@ -150,5 +159,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <LoginForm />
+    </Suspense>
   )
 }

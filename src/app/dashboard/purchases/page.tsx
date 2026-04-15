@@ -15,9 +15,7 @@ import { Spinner } from "@/components/spinner"
 import { AlertCircle, FileUp, Plus, Save, Trash2, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const MAX_INVOICE_LENGTH = 80
-const MAX_ITEMS = 25
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+import { MAX_INVOICE_LENGTH, MAX_ITEMS, MAX_FILE_SIZE } from "@/lib/constants"
 
 const itemSchema = z.object({
   item_name: z.string().trim().min(1, "Shkruani emrin e artikullit").max(120, "Emri i artikullit eshte shume i gjate"),

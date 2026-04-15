@@ -11,10 +11,9 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      if (next === '/update-password') {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
-      return NextResponse.redirect(`${origin}${next}`)
+      // Redirect to the requested page, defaulting to /dashboard
+      const redirectTo = next === '/' ? '/dashboard' : next
+      return NextResponse.redirect(`${origin}${redirectTo}`)
     }
   }
 
