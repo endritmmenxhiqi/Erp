@@ -1,16 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "@/components/language-provider"
 import { createClient } from "@/utils/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
-  Accordion,
-  AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  AccordionContent,
 } from "@/components/ui/accordion"
 import {
   Dialog,
@@ -18,39 +17,63 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { FileText, Calendar, ChevronRight, Printer, Search } from "lucide-react"
+import { FileText, Calendar, ChevronRight, Printer, Receipt } from "lucide-react"
+import { EmptyState } from "@/components/EmptyState"
+import { Spinner } from "@/components/spinner"
+
+interface Sale {
+  id: number
+  invoice_num: string
+  date: string
+  total_amount: number
+  vat_rate: number
+  type: string
+  user_id: string
+}
+
+interface GroupedSales {
+  [date: string]: Sale[]
+}
 
 export default function SalesBookPage() {
   const { t } = useTranslation()
-  const [sales, setSales] = useState<any[]>([])
-  const [groupedSales, setGroupedSales] = useState<any>({})
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
+  const [groupedSales, setGroupedSales] = useState<GroupedSales>({})
+  const [selectedInvoice, setSelectedInvoice] = useState<Sale | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
+
+  const fetchSales = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .order('date', { ascending: false })
+
+      if (error) throw error
+
+      if (data) {
+        const grouped = (data as Sale[]).reduce((acc: GroupedSales, sale) => {
+          const date = new Date(sale.date).toLocaleDateString()
+          if (!acc[date]) acc[date] = []
+          acc[date].push(sale)
+          return acc
+        }, {})
+        setGroupedSales(grouped)
+      }
+    } catch (err) {
+      console.error("Error fetching sales:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase])
 
   useEffect(() => {
     fetchSales()
-  }, [])
-
-  async function fetchSales() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data, error } = await supabase
-      .from('sales')
-      .select('*')
-      .order('date', { ascending: false })
-
-    if (data) {
-      setSales(data)
-      const grouped = data.reduce((acc: any, sale: any) => {
-        const date = new Date(sale.date).toLocaleDateString()
-        if (!acc[date]) acc[date] = []
-        acc[date].push(sale)
-        return acc
-      }, {})
-      setGroupedSales(grouped)
-    }
-  }
+  }, [fetchSales])
 
   const [expandedDate, setExpandedDate] = useState<string | null>(null)
 
@@ -70,58 +93,70 @@ export default function SalesBookPage() {
         </CardHeader>
         <CardContent>
           <div className="w-full space-y-4">
-            {Object.keys(groupedSales).map((date) => (
-              <AccordionItem key={date} className="glass-card !border-border rounded-xl px-4 overflow-hidden">
-                <AccordionTrigger 
-                  onClick={() => setExpandedDate(expandedDate === date ? null : date)}
-                  className="hover:no-underline w-full"
-                >
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center">
-                       <Calendar className="w-4 h-4 mr-2 text-primary" />
-                       <span className="font-bold">{date}</span>
+            {isLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Spinner />
+              </div>
+            ) : Object.keys(groupedSales).length > 0 ? (
+              Object.keys(groupedSales).map((date) => (
+                <AccordionItem key={date} className="glass-card !border-border rounded-xl px-4 overflow-hidden">
+                  <AccordionTrigger 
+                    onClick={() => setExpandedDate(expandedDate === date ? null : date)}
+                    className="hover:no-underline w-full"
+                  >
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center">
+                         <Calendar className="w-4 h-4 mr-2 text-primary" />
+                         <span className="font-bold">{date}</span>
+                      </div>
+                      <div className="flex items-center space-x-6">
+                         <span className="text-sm text-muted-foreground">{groupedSales[date].length} Fatura</span>
+                         <span className="text-lg font-extrabold">
+                            {groupedSales[date].reduce((sum: number, s: Sale) => sum + Number(s.total_amount), 0).toFixed(2)}€
+                         </span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-6">
-                       <span className="text-sm text-muted-foreground">{groupedSales[date].length} Fatura</span>
-                       <span className="text-lg font-extrabold">
-                          {groupedSales[date].reduce((sum: number, s: any) => sum + Number(s.total_amount), 0).toFixed(2)}€
-                       </span>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                {expandedDate === date && (
-                  <AccordionContent className="animate-in slide-in-from-top-2 duration-200">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent border-border">
-                          <TableHead className="w-[100px]">{t("serial_number")}</TableHead>
-                          <TableHead>{t("invoice_number")}</TableHead>
-                          <TableHead>{t("type")}</TableHead>
-                          <TableHead className="text-right">{t("total_amount")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupedSales[date].map((sale: any, idx: number) => (
-                          <TableRow 
-                            key={sale.id} 
-                            className="cursor-pointer hover:bg-primary/5 border-border active:scale-[0.99] transition-all"
-                            onClick={() => setSelectedInvoice(sale)}
-                          >
-                            <TableCell className="font-medium">#{idx + 1}</TableCell>
-                            <TableCell className="font-bold text-primary flex items-center">
-                               {sale.invoice_num}
-                               <ChevronRight className="w-3 h-3 ml-1 opacity-50" />
-                            </TableCell>
-                            <TableCell>{sale.type}</TableCell>
-                            <TableCell className="text-right font-bold">{sale.total_amount}€</TableCell>
+                  </AccordionTrigger>
+                  {expandedDate === date && (
+                    <AccordionContent className="animate-in slide-in-from-top-2 duration-200">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-border">
+                            <TableHead className="w-[100px]">{t("serial_number")}</TableHead>
+                            <TableHead>{t("invoice_number")}</TableHead>
+                            <TableHead>{t("type")}</TableHead>
+                            <TableHead className="text-right">{t("total_amount")}</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </AccordionContent>
-                )}
-              </AccordionItem>
-            ))}
+                        </TableHeader>
+                        <TableBody>
+                          {groupedSales[date].map((sale: Sale, idx: number) => (
+                            <TableRow 
+                              key={sale.id} 
+                              className="cursor-pointer hover:bg-primary/5 border-border active:scale-[0.99] transition-all"
+                              onClick={() => setSelectedInvoice(sale)}
+                            >
+                              <TableCell className="font-medium">#{idx + 1}</TableCell>
+                              <TableCell className="font-bold text-primary flex items-center">
+                                 {sale.invoice_num}
+                                 <ChevronRight className="w-3 h-3 ml-1 opacity-50" />
+                              </TableCell>
+                              <TableCell>{sale.type}</TableCell>
+                              <TableCell className="text-right font-bold">{sale.total_amount}€</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  )}
+                </AccordionItem>
+              ))
+            ) : (
+              <EmptyState 
+                title="S'u gjet asnjë shitje" 
+                description="Ju nuk keni regjistruar ende asnjë shitje. Regjistrimet tuaja do të shfaqen këtu."
+                icon={Receipt}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -180,23 +215,4 @@ export default function SalesBookPage() {
   )
 }
 
-function Receipt(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
-      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
-      <path d="M12 17.5V6.5" />
-    </svg>
-  )
-}
+

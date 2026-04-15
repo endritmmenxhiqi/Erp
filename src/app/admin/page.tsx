@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 
+interface Profile {
+  id: string
+  business_name: string
+  email: string
+  fiscal_number: string
+  role: string
+  created_at: string
+}
+
 export default function AdminPage() {
   const { t, language } = useTranslation()
-  const [profiles, setProfiles] = useState<any[]>([])
+  const [profiles, setProfiles] = useState<Profile[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -19,10 +28,10 @@ export default function AdminPage() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10)
-      if (data) setProfiles(data)
+      if (data) setProfiles(data as Profile[])
     }
     load()
-  }, [])
+  }, [supabase])
 
   return (
     <div className="space-y-12">

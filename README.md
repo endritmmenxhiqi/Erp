@@ -1,125 +1,89 @@
 # Anti-Gravity ERP System 🚀
 
-Një sistem ERP modern i ndërtuar me Next.js dhe Supabase, i dizajnuar për bizneset e vogla dhe të mesme.
+Një sistem ERP (Enterprise Resource Planning) modern, i shpejtë dhe i sigurt, i ndërtuar për të fuqizuar bizneset e vogla dhe të mesme me teknologjinë më të fundit.
 
-## 🌐 Linku Live (Vercel)
-
-👉 **https://erp-omega-seven.vercel.app**
-
----
-
-## ✨ Çfarë bën ky projekt?
-
-- **Menaxhim blerjesh (Purchases):** Regjistro fatura blerje me ose pa imazh. AI nxjerr automatikisht të dhënat nga foto/PDF e faturës.
-- **Libri i blerjeve (Purchases Book):** Shiko historikun e plotë të të gjitha blerjeve.
-- **Menaxhim shitjesh (Sales):** Krijo fatura shitjesh me llogaritje automatike të TVSH-së. Mbështet printim direkt.
-- **Libri i shitjeve (Sales Book):** Shiko historikun e plotë të shitjeve.
-- **Magazinë (Consumption/Stock):** Stoku përditësohet automatikisht pas çdo blerje ose shitje.
-- **Asistent AI (Chat with DB):** Bëj pyetje në gjuhë natyrore dhe merr të dhëna direkt nga databaza.
-- **Role-based access:** Roli `admin` ka akses në panel administrimi; roli `user` ka akses vetëm në dashboard.
-- **Shumëgjuhësh:** Mbështet shqip dhe anglisht.
-- **Dark / Light mode.**
+## 🌐 Linku Live
+👉 **[erp-omega-seven.vercel.app](https://erp-omega-seven.vercel.app)**
 
 ---
 
-## 🏃 Si të niset lokalisht
+## ✨ Karakteristikat Kryesore
 
-### Kërkesat paraprake
-
-- Node.js `>= 18`
-- npm
-
-### Hapat
-
-```bash
-# 1. Klono projektin
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
-
-# 2. Instalo varësitë
-npm install
-
-# 3. Krijo skedarin e variablave të mjedisit
-cp .env.local.example .env.local
-# Pastaj plotëso vlerat (shih seksionin .env më poshtë)
-
-# 4. Nis serverin e zhvillimit
-npm run dev
-```
-
-Hap **http://localhost:3000** në browser.
+- **📑 Menaxhim Blerjesh (Purchases):** Regjistrim i detajuar i faturave me mbështetje për imazhe dhe PDF.
+- **🤖 AI Extraction (OCR):** Procesim automatik i faturave duke përdorur Gemini 2.0 Flash (përmes OpenRouter). Nuk ka më nevojë për input manual të gjatë!
+- **📦 Menaxhim Stoku (Stock):** Përditësim automatik dhe **atomik** i stokut pas çdo blerjeje ose shitjeje.
+- **💰 Menaxhim Shitjesh (Sales):** Krijim i faturave të shitjes me llogaritje automatike të TVSH-së dhe opsion për printim direkt.
+- **📈 Libri i Blerjes & Shitjes:** Pasqyra të detajuara të transaksioneve, të grupuara sipas datës.
+- **💬 AI Chat with DB:** Komunikoni me të dhënat tuaja në gjuhë natyrore. Pyetni "Sa kemi shitur sot?" dhe merrni përgjigje në kohë reale.
+- **🔒 Siguri e Lartë:** Autentikim dhe autorizim i bazuar në role (Admin/User) përmes Supabase Auth.
+- **🌓 UI Moderne:** Mbështetje për Dark & Light mode me një dizajn "Glassmorphism" premium.
 
 ---
 
-## 🔑 Variablat e mjedisit (`.env.local`)
+## 🛠️ Stack Teknologjik
 
-Krijo skedarin `.env.local` në rrënjën e projektit me këto vlera:
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# OpenRouter (për AI Chat dhe ekstraksion faturash)
-OPENROUTER_API_KEY=sk-or-v1-your_openrouter_key
-```
-
-### Si t'i marrësh çelësat?
-
-| Variabla | Ku ta gjesh |
+| Teknologjia | Roli |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | [Supabase Dashboard](https://app.supabase.com) → Project Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | E njëjta faqe me URL-në |
-| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **Next.js 15+** | Framework kryesor (App Router) |
+| **Supabase** | Backend-as-a-Service (PostgreSQL, Auth, Storage) |
+| **Tailwind CSS 4** | Stilizimi ultra-modern dhe responsive |
+| **shadcn/ui** | Komponentët UI me standarde të larta |
+| **Zod** | Validimi i të dhënave (Type-safe) |
+| **OpenRouter** | Integrimi i AI (Gemini 2.0 Flash) |
+| **Lucide Icons** | Ikonografia e pastër |
 
 ---
 
-## 🛠️ Stack teknologjik
+## 🏃 Fillimi i Shpejtë (Lokalisht)
 
-| Teknologji | Roli |
-|---|---|
-| [Next.js 16](https://nextjs.org) | Framework kryesor (App Router) |
-| [Supabase](https://supabase.com) | Databaza (PostgreSQL) + Auth |
-| [Tailwind CSS 4](https://tailwindcss.com) | Stilizimi |
-| [shadcn/ui](https://ui.shadcn.com) | Komponentët UI |
-| [Zod](https://zod.dev) | Validimi i formave |
-| [OpenRouter](https://openrouter.ai) | AI (Gemini 2.0 Flash) për Chat dhe OCR |
-| [Sonner](https://sonner.emilkowal.ski) | Njoftimet toast |
+### Kërkesat Paraprake
+- Node.js (v18+)
+- npm ose yarn
 
----
+### Instalimi
 
-## 📁 Struktura e projektit
+1. **Klono repositorin:**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
+   cd YOUR_REPO
+   ```
 
-```
-src/
-├── app/
-│   ├── (auth)/         # Login, Register, Forgot Password, Update Password
-│   ├── dashboard/      # Faqet e përdoruesit (Purchases, Sales, Stock...)
-│   ├── admin/          # Paneli i administratorit
-│   └── api/            # API Routes (chat-db, extract)
-├── components/         # Komponentët e ripërdorshëm (Sidebar, ChatDB, ...)
-├── lib/
-│   ├── utils.ts        # Funksione ndihmëse
-│   └── constants.ts    # Konstantet e përbashkëta
-└── utils/
-    └── supabase/       # Klientët e Supabase (client, server, middleware)
-```
+2. **Instalo varësitë:**
+   ```bash
+   npm install
+   ```
 
----
+3. **Konfiguro variablat e mjedisit (`.env.local`):**
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   OPENROUTER_API_KEY=your-openrouter-key
+   ```
 
-## 🚀 Deployment (Vercel)
+4. **Nis serverin:**
+   ```bash
+   npm run dev
+   ```
 
-1. Shto repo-n në [vercel.com](https://vercel.com)
-2. Shto variablat e mjedisit në **Project Settings → Environment Variables**
-3. Deplojo — Vercel e bën automatikisht pas çdo `git push`
+Hap [http://localhost:3000](http://localhost:3000) në browserin tuaj.
 
 ---
 
-## 📝 Scripted e npm
+## 📂 Struktura e Projektit
 
-```bash
-npm run dev     # Nis serverin e zhvillimit
-npm run build   # Ndrton bundellin e prodhimit
-npm run start   # Nis server-in e prodhimit
-npm run lint    # Kontrollon kodin me ESLint
-```
+- `src/app/` - Rrugët e aplikacionit (App Router)
+- `src/components/` - Komponentët e ripërdorshëm (UI & Business Logic)
+- `src/lib/services/` - Shërbimet e centralizuara (Stock, API layer)
+- `supabase/` - Skriptet e bazës së të dhënave dhe migrimet
+
+---
+
+## 🛡️ Hardening & Optimization (Përditësimi i Fundit)
+Në versionin e fundit kemi përmirësuar:
+1. **Atomic Stock Updates:** Tani përditësimet e stokut bëhen përmes funksioneve në nivel database (SQL RPC) për të shmangur gabimet në transaksione simultane.
+2. **UX Empty States:** Çdo tabelë tani ka një gjendje vizuale të qartë kur nuk ka të dhëna.
+3. **Refaktoring:** Logjika e biznesit është ndarë nga komponentët UI për mirëmbajtje më të lehtë.
+
+---
+
+Prodhuar me ❤️ nga Antigravity ERP Team.

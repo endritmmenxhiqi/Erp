@@ -34,5 +34,18 @@ Using a managed authentication service like Supabase reduces the "Attack Surface
 3. **Environment Isolation**: Sensitive keys are NEVER committed to GitHub (ensured by our `.gitignore` stabilization).
 4. **Principle of Least Privilege**: The `anon` key only allows access to authentication and public data, while Row Level Security (RLS) on the database ensures users can only see their own data.
 
+5. **Hardening & Transaction Integrity (The "Debug & Review" Pass)**
+In the final hardening phase, we moved beyond just functional parity and focused on **stability** and **concurrency**.
+
+### Atomic Stock Updates
+The initial implementation used a client-side fetch-then-update pattern for managing stock. This was vulnerable to race conditions (e.g., if a user saved a purchase and a sale at the same time, or double-clicked a submit button). 
+- **The Solution**: We implemented a **PostgreSQL function (`handle_stock_update`)** within Supabase.
+- **The Benefit**: Updates are now atomic. Using `INSERT ... ON CONFLICT DO UPDATE` ensures that stock levels are always accurate even under concurrent load, eliminating a critical class of data integrity bugs.
+
+### UX Resilience
+- **Empty States**: We added a global `EmptyState` component to handle cases where the database returns no results, replacing empty cards with professional, instructional feedback.
+- **Loading Hardening**: Skeletons and spinners were unified across all dashboard modules to ensure the user never feels "stuck" during network latency.
+- **Service Layer**: We extracted business logic into `StockService`, decoupling our UI from direct database implementations and making the codebase significantly more maintainable.
+
 ## Final Thoughts
-This implementation provides a robust, scalable, and secure foundation for the ERP project. By combining the power of Next.js for the frontend and Supabase for the backend, we've created an authentication experience that is both developer-friendly and highly secure for end-users.
+This project has evolved from a basic Next.js app to a hardened, professional-grade ERP system. By combining front-end best practices with robust database-level logic, we've created a platform that is not just functional, but demonstrably stable and production-ready.

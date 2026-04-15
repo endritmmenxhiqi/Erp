@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from "react"
+import React, { createContext, useContext, useState } from "react"
 
 type Language = "sq" | "en"
 
@@ -202,14 +202,15 @@ const translations = {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>("sq")
-
-  useEffect(() => {
-    const saved = localStorage.getItem("app-language") as Language
-    if (saved && (saved === "sq" || saved === "en")) {
-      setLanguage(saved)
+  const [language, setLanguage] = useState<Language>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("app-language") as Language
+      if (saved && (saved === "sq" || saved === "en")) {
+        return saved
+      }
     }
-  }, [])
+    return "sq"
+  })
 
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang)
@@ -218,10 +219,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = (key: string) => {
     const keys = key.split(".")
-    let result: any = translations[language]
+    let result: unknown = translations[language]
     for (const k of keys) {
-      if (result && result[k]) {
-        result = result[k]
+      if (result && typeof result === 'object' && k in (result as Record<string, unknown>)) {
+        result = (result as Record<string, unknown>)[k]
       } else {
         return key
       }

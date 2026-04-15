@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox"
 import { Spinner } from "@/components/spinner"
 import Link from "next/link"
-import { ShieldCheck, ChevronRight, Rocket } from "lucide-react"
+import { ChevronRight, Rocket } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useTranslation } from "@/components/language-provider"
@@ -74,7 +74,7 @@ export default function RegisterPage() {
 
       toast.success(t("auth.success_register"))
       router.push('/login')
-    } catch (error) {
+    } catch (err: unknown) {
       toast.error(t("auth.error_unexpected"))
     } finally {
       setIsLoading(false)

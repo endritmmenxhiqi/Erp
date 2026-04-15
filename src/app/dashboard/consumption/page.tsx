@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { AlertCircle, AlertTriangle, Minus, Package, Search } from "lucide-react"
 import { Spinner } from "@/components/spinner"
+import { StockService } from "@/lib/services/stock"
 
 export default function ConsumptionPage() {
   const { t } = useTranslation()
@@ -66,10 +67,18 @@ export default function ConsumptionPage() {
 
     setActiveItemId(itemId)
     try {
-      const newQty = Math.max(0, Number(currentQty) - Number(amount))
-      const { error } = await supabase.from("stock").update({ quantity: newQty }).eq("id", itemId)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-      if (error) throw error
+      if (!user) throw new Error("Sesioni ka skaduar.")
+
+      await StockService.updateStock(
+        itemName,
+        -amount, // Negative for consumption
+        "njesia", // We don't have the unit in the handleConsume signature easily, but the SQL function handles existing units anyway.
+        user.id
+      )
 
       toast.success(`${amount} ${itemName} u zbriten nga stoku.`)
       setConsumingItems((prev) => ({ ...prev, [itemId]: 0 }))

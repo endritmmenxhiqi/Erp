@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { createClient } from "@/utils/supabase/client"
 import { Spinner } from "@/components/spinner"
 import { AlertCircle, AlertTriangle, Plus, Printer, Receipt, Save, Trash2 } from "lucide-react"
+import { StockService } from "@/lib/services/stock"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,20 +111,12 @@ export default function SalesPage() {
 
       if (values.type === "Mall") {
         for (const item of values.items) {
-          const { data: existing, error: stockLookupError } = await supabase
-            .from("stock")
-            .select("*")
-            .eq("item_name", item.item_name)
-            .eq("user_id", user.id)
-            .maybeSingle()
-
-          if (stockLookupError) throw stockLookupError
-
-          if (existing) {
-            const newQty = Math.max(0, Number(existing.quantity) - Number(item.quantity))
-            const { error: updateError } = await supabase.from("stock").update({ quantity: newQty }).eq("id", existing.id)
-            if (updateError) throw updateError
-          }
+          await StockService.updateStock(
+            item.item_name,
+            -item.quantity, // Negative for sales (decrease stock)
+            item.unit,
+            user.id
+          )
         }
       }
 

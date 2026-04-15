@@ -6,9 +6,20 @@ import { Briefcase, Phone, MapPin, Hash, Sparkles, TrendingUp, ShieldCheck } fro
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 
+interface Profile {
+  id: string
+  business_name: string
+  email: string
+  fiscal_number: string
+  phone_number: string
+  address: string
+  role: string
+  created_at: string
+}
+
 export default function DashboardPage() {
   const { t } = useTranslation()
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
 
@@ -21,12 +32,12 @@ export default function DashboardPage() {
           .select('*')
           .eq('id', user.id)
           .single()
-        setProfile(data)
+        setProfile(data as Profile)
       }
       setIsLoading(false)
     }
     load()
-  }, [])
+  }, [supabase])
 
   if (isLoading) {
     return (

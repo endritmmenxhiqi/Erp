@@ -28,7 +28,6 @@ const updatePasswordSchema = z.object({
 export default function UpdatePasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
-  const { t } = useTranslation()
   const router = useRouter()
 
   const form = useForm<z.infer<typeof updatePasswordSchema>>({
@@ -50,7 +49,7 @@ export default function UpdatePasswordPage() {
 
       toast.success("Password updated successfully!")
       router.push("/login")
-    } catch (error) {
+    } catch (err: unknown) {
       toast.error("An unexpected error occurred")
     } finally {
       setIsLoading(false)

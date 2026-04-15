@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Spinner } from "@/components/spinner"
 import Link from "next/link"
-import { ShieldCheck, ChevronRight, Rocket, AlertCircle } from "lucide-react"
+import { ChevronRight, Rocket, AlertCircle } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useTranslation } from "@/components/language-provider"
@@ -62,7 +62,7 @@ function LoginForm() {
 
       toast.success(t("auth.success_login"))
       router.push(profile.role === 'admin' ? '/admin' : '/dashboard')
-    } catch (error) {
+    } catch (err: unknown) {
       toast.error(t("auth.error_unexpected"))
     } finally {
       setIsLoading(false)

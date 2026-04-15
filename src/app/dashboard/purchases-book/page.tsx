@@ -17,39 +17,64 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { FileText, Calendar, ChevronRight, Hash, Receipt, Package } from "lucide-react"
+import { FileText, Calendar, ChevronRight, Receipt, Package } from "lucide-react"
+import { EmptyState } from "@/components/EmptyState"
+import { Spinner } from "@/components/spinner"
+
+
+interface Purchase {
+  id: number
+  invoice_num: string
+  date: string
+  total_cost: number
+  seller_fiscal_num: string | null
+  image_url: string | null
+  user_id: string
+}
+
+interface GroupedPurchases {
+  [date: string]: Purchase[]
+}
 
 export default function PurchasesBookPage() {
   const { t } = useTranslation()
-  const [purchases, setPurchases] = useState<any[]>([])
-  const [groupedPurchases, setGroupedPurchases] = useState<any>({})
-  const [selectedPurchase, setSelectedPurchase] = useState<any>(null)
+  const [groupedPurchases, setGroupedPurchases] = useState<GroupedPurchases>({})
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
+
+  const fetchPurchases = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*')
+        .order('date', { ascending: false })
+
+      if (error) throw error
+
+      if (data) {
+        const grouped = (data as Purchase[]).reduce((acc: GroupedPurchases, purchase) => {
+          const date = new Date(purchase.date).toLocaleDateString()
+          if (!acc[date]) acc[date] = []
+          acc[date].push(purchase)
+          return acc
+        }, {})
+        setGroupedPurchases(grouped)
+      }
+    } catch (err) {
+      console.error("Error fetching purchases:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase])
 
   useEffect(() => {
     fetchPurchases()
-  }, [])
-
-  async function fetchPurchases() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data, error } = await supabase
-      .from('purchases')
-      .select('*')
-      .order('date', { ascending: false })
-
-    if (data) {
-      setPurchases(data)
-      const grouped = data.reduce((acc: any, purchase: any) => {
-        const date = new Date(purchase.date).toLocaleDateString()
-        if (!acc[date]) acc[date] = []
-        acc[date].push(purchase)
-        return acc
-      }, {})
-      setGroupedPurchases(grouped)
-    }
-  }
+  }, [fetchPurchases])
 
   const [expandedDate, setExpandedDate] = useState<string | null>(null)
 
@@ -69,58 +94,70 @@ export default function PurchasesBookPage() {
         </CardHeader>
         <CardContent>
           <div className="w-full space-y-4">
-            {Object.keys(groupedPurchases).map((date) => (
-              <AccordionItem key={date} className="glass-card !border-border rounded-xl px-4 overflow-hidden">
-                <AccordionTrigger 
-                  onClick={() => setExpandedDate(expandedDate === date ? null : date)}
-                  className="hover:no-underline w-full"
-                >
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center">
-                       <Calendar className="w-4 h-4 mr-2 text-primary" />
-                       <span className="font-bold">{date}</span>
+            {isLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Spinner />
+              </div>
+            ) : Object.keys(groupedPurchases).length > 0 ? (
+              Object.keys(groupedPurchases).map((date) => (
+                <AccordionItem key={date} className="glass-card !border-border rounded-xl px-4 overflow-hidden">
+                  <AccordionTrigger 
+                    onClick={() => setExpandedDate(expandedDate === date ? null : date)}
+                    className="hover:no-underline w-full"
+                  >
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center">
+                         <Calendar className="w-4 h-4 mr-2 text-primary" />
+                         <span className="font-bold">{date}</span>
+                      </div>
+                      <div className="flex items-center space-x-6">
+                         <span className="text-sm text-muted-foreground">{groupedPurchases[date].length} Blerje</span>
+                         <span className="text-lg font-extrabold">
+                            {groupedPurchases[date].reduce((sum: number, p: Purchase) => sum + Number(p.total_cost), 0).toFixed(2)}€
+                         </span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-6">
-                       <span className="text-sm text-muted-foreground">{groupedPurchases[date].length} Blerje</span>
-                       <span className="text-lg font-extrabold">
-                          {groupedPurchases[date].reduce((sum: number, p: any) => sum + Number(p.total_cost), 0).toFixed(2)}€
-                       </span>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                {expandedDate === date && (
-                  <AccordionContent className="animate-in slide-in-from-top-2 duration-200">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent border-border">
-                          <TableHead className="w-[100px]">{t("serial_number")}</TableHead>
-                          <TableHead>{t("invoice_number")}</TableHead>
-                          <TableHead>{t("seller_fiscal")}</TableHead>
-                          <TableHead className="text-right">{t("total_cost")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupedPurchases[date].map((purchase: any, idx: number) => (
-                          <TableRow 
-                            key={purchase.id} 
-                            className="cursor-pointer hover:bg-primary/5 border-border active:scale-[0.99] transition-all"
-                            onClick={() => setSelectedPurchase(purchase)}
-                          >
-                            <TableCell className="font-medium">#{idx + 1}</TableCell>
-                            <TableCell className="font-bold text-primary flex items-center">
-                               {purchase.invoice_num}
-                               <ChevronRight className="w-3 h-3 ml-1 opacity-50" />
-                            </TableCell>
-                            <TableCell>{purchase.seller_fiscal_num}</TableCell>
-                            <TableCell className="text-right font-bold">{purchase.total_cost}€</TableCell>
+                  </AccordionTrigger>
+                  {expandedDate === date && (
+                    <AccordionContent className="animate-in slide-in-from-top-2 duration-200">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-border">
+                            <TableHead className="w-[100px]">{t("serial_number")}</TableHead>
+                            <TableHead>{t("invoice_number")}</TableHead>
+                            <TableHead>{t("seller_fiscal")}</TableHead>
+                            <TableHead className="text-right">{t("total_cost")}</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </AccordionContent>
-                )}
-              </AccordionItem>
-            ))}
+                        </TableHeader>
+                        <TableBody>
+                          {groupedPurchases[date].map((purchase: Purchase, idx: number) => (
+                            <TableRow 
+                              key={purchase.id} 
+                              className="cursor-pointer hover:bg-primary/5 border-border active:scale-[0.99] transition-all"
+                              onClick={() => setSelectedPurchase(purchase)}
+                            >
+                              <TableCell className="font-medium">#{idx + 1}</TableCell>
+                              <TableCell className="font-bold text-primary flex items-center">
+                                 {purchase.invoice_num}
+                                 <ChevronRight className="w-3 h-3 ml-1 opacity-50" />
+                              </TableCell>
+                              <TableCell>{purchase.seller_fiscal_num}</TableCell>
+                              <TableCell className="text-right font-bold">{purchase.total_cost}€</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  )}
+                </AccordionItem>
+              ))
+            ) : (
+              <EmptyState 
+                title="S'u gjet asnjë blerje" 
+                description="Ju nuk keni regjistruar ende asnjë blerje. Regjistrimet tuaja do të shfaqen këtu."
+                icon={Package}
+              />
+            )}
           </div>
         </CardContent>
       </Card>

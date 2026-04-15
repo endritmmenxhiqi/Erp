@@ -14,6 +14,7 @@ import { createClient } from "@/utils/supabase/client"
 import { Spinner } from "@/components/spinner"
 import { AlertCircle, FileUp, Plus, Save, Trash2, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StockService } from "@/lib/services/stock"
 
 import { MAX_INVOICE_LENGTH, MAX_ITEMS, MAX_FILE_SIZE } from "@/lib/constants"
 
@@ -114,32 +115,12 @@ export default function PurchasesPage() {
       if (purchaseError) throw purchaseError
 
       for (const item of values.items) {
-        const { data: existing, error: stockLookupError } = await supabase
-          .from("stock")
-          .select("*")
-          .eq("item_name", item.item_name)
-          .eq("user_id", user.id)
-          .maybeSingle()
-
-        if (stockLookupError) throw stockLookupError
-
-        if (existing) {
-          const { error: updateError } = await supabase
-            .from("stock")
-            .update({ quantity: Number(existing.quantity) + Number(item.quantity) })
-            .eq("id", existing.id)
-
-          if (updateError) throw updateError
-        } else {
-          const { error: insertError } = await supabase.from("stock").insert({
-            item_name: item.item_name,
-            quantity: item.quantity,
-            unit: item.unit,
-            user_id: user.id,
-          })
-
-          if (insertError) throw insertError
-        }
+        await StockService.updateStock(
+          item.item_name,
+          item.quantity,
+          item.unit,
+          user.id
+        )
       }
 
       toast.success("Blerja u regjistrua dhe stoku u perditesua.")

@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
       }
 
       toast.success(t("auth.success_reset"))
-    } catch (error) {
+    } catch (err: unknown) {
       toast.error(t("auth.error_unexpected"))
     } finally {
       setIsLoading(false)
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
               <FormField
                 control={form.control}
                 name="email"
-                render={({ field }: { field: any }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("work_email")}</FormLabel>
                     <FormControl>
