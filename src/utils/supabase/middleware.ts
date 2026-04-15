@@ -27,9 +27,16 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Provoni të merrni përdoruesin, por kapni gabimet e Fetch (p.sh. kur URL është e gabuar)
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (e) {
+    console.error("Middleware Auth Error (Fetch Failed): Check your Supabase URL in .env.local", e);
+    // Në rast dështimi të rrjetit, lejoje kërkesën të vazhdojë për të shmangur loop-in,
+    // por përdoruesi do të trajtohet si "pa sesion" në faqet e mbrojtura.
+  }
 
   const pathname = request.nextUrl.pathname
 

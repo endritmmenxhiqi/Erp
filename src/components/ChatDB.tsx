@@ -86,15 +86,15 @@ export function ChatDB() {
       }
 
       const content =
-        result.content || (Array.isArray(result.data) && result.data.length > 0 ? 'Gjeta keto te dhena:' : 'Nuk kam nje pergjigje per kete.');
+        result?.content || (Array.isArray(result?.data) && result!.data!.length > 0 ? 'Gjeta keto te dhena:' : 'Nuk kam nje pergjigje per kete.');
 
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content,
-          data: result.data ?? null,
-          sql: result.sql ?? null,
+          data: result?.data ?? null,
+          sql: result?.sql ?? null,
         },
       ]);
     } catch (error) {
