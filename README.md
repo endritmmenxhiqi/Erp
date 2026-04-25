@@ -1,89 +1,51 @@
-# Anti-Gravity ERP System 🚀
+# Advanced ERP System with AI Integration
 
-Një sistem ERP (Enterprise Resource Planning) modern, i shpejtë dhe i sigurt, i ndërtuar për të fuqizuar bizneset e vogla dhe të mesme me teknologjinë më të fundit.
+Një sistem profesional për menaxhimin e bizneseve (ERP) i ndërtuar me teknologjitë më moderne. Ky projekt synon të automatizojë regjistrimin e blerjeve përmes Inteligjencës Artificiale dhe të ofrojë një pasqyrë të plotë të aktivitetit tregtar.
 
-## 🌐 Linku Live
-👉 **[erp-omega-seven.vercel.app](https://erp-omega-seven.vercel.app)**
+## ✨ Veçoritë Kryesore (Features)
 
----
+- 🤖 **AI Invoice Extraction:** Ngarkoni faturat dhe sistemi nxjerr automatikisht artikujt, sasitë dhe çmimet duke përdorur modele të avancuara të AI (Gemini/Groq).
+- 📦 **Menaxhimi i Stokut:** Përditësimi automatik i gjendjes së artikujve pas blerjeve dhe shitjeve.
+- 🏷️ **Barcode System:** Shitje e shpejtë përmes kërkimit me barkod.
+- 📊 **Libra të Shitjes dhe Blerjes:** Raportim i detajuar i grupuar sipas muajve dhe viteve me kalkulim automatik të TVSH-së.
+- 🌍 **Multi-language Support:** Përkrahje e plotë për gjuhën Shqipe dhe Angleze (i18n).
+- 🛡️ **Admin Panel:** Menaxhim i përdoruesve dhe kontrolli i qasjes në veçoritë e AI.
+- 💬 **ChatDB AI:** Asistent inteligjent për të komunikuar me të dhënat e biznesit tuaj.
+- 🌓 **Dark/Light Mode:** Interface modern që përshtatet sipas preferencave të përdoruesit.
 
-## ✨ Karakteristikat Kryesore
+## 🚀 Teknologjitë e Përdorura
 
-- **📑 Menaxhim Blerjesh (Purchases):** Regjistrim i detajuar i faturave me mbështetje për imazhe dhe PDF.
-- **🤖 AI Extraction (OCR):** Procesim automatik i faturave duke përdorur Gemini 2.0 Flash (përmes OpenRouter). Nuk ka më nevojë për input manual të gjatë!
-- **📦 Menaxhim Stoku (Stock):** Përditësim automatik dhe **atomik** i stokut pas çdo blerjeje ose shitjeje.
-- **💰 Menaxhim Shitjesh (Sales):** Krijim i faturave të shitjes me llogaritje automatike të TVSH-së dhe opsion për printim direkt.
-- **📈 Libri i Blerjes & Shitjes:** Pasqyra të detajuara të transaksioneve, të grupuara sipas datës.
-- **💬 AI Chat with DB:** Komunikoni me të dhënat tuaja në gjuhë natyrore. Pyetni "Sa kemi shitur sot?" dhe merrni përgjigje në kohë reale.
-- **🔒 Siguri e Lartë:** Autentikim dhe autorizim i bazuar në role (Admin/User) përmes Supabase Auth.
-- **🌓 UI Moderne:** Mbështetje për Dark & Light mode me një dizajn "Glassmorphism" premium.
+- **Frontend:** [Next.js 15+](https://nextjs.org/), React 19, Tailwind CSS.
+- **Components:** [Shadcn/UI](https://ui.shadcn.com/), Radix UI, Lucide Icons.
+- **Backend/Database:** [Supabase](https://supabase.com/) (PostgreSQL, Auth, RLS).
+- **AI Models:** Google Gemini Pro Vision / Groq Llama 3 Vision.
+- **Forms & Validation:** React Hook Form + Zod.
+- **Deployment:** Vercel.
 
----
+## 🛠️ Instalimi dhe Fillimi
 
-## 🛠️ Stack Teknologjik
-
-| Teknologjia | Roli |
-|---|---|
-| **Next.js 15+** | Framework kryesor (App Router) |
-| **Supabase** | Backend-as-a-Service (PostgreSQL, Auth, Storage) |
-| **Tailwind CSS 4** | Stilizimi ultra-modern dhe responsive |
-| **shadcn/ui** | Komponentët UI me standarde të larta |
-| **Zod** | Validimi i të dhënave (Type-safe) |
-| **OpenRouter** | Integrimi i AI (Gemini 2.0 Flash) |
-| **Lucide Icons** | Ikonografia e pastër |
-
----
-
-## 🏃 Fillimi i Shpejtë (Lokalisht)
-
-### Kërkesat Paraprake
-- Node.js (v18+)
-- npm ose yarn
-
-### Instalimi
-
-1. **Klono repositorin:**
+1. Klono projektin:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-   cd YOUR_REPO
+   git clone https://github.com/endritmmenxhiqi/Erp.git
    ```
-
-2. **Instalo varësitë:**
+2. Instalo dependencat:
    ```bash
    npm install
    ```
-
-3. **Konfiguro variablat e mjedisit (`.env.local`):**
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   OPENROUTER_API_KEY=your-openrouter-key
-   ```
-
-4. **Nis serverin:**
+3. Konfiguro variablat e mjedisit (`.env.local`):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `GEMINI_API_KEY` apo `GROQ_API_KEY`
+4. Starto projektin:
    ```bash
    npm run dev
    ```
 
-Hap [http://localhost:3000](http://localhost:3000) në browserin tuaj.
+## 📈 Demo Plani
+Plani i detajuar i prezantimit final mund të gjendet në: [docs/demo-plan.md](./docs/demo-plan.md)
+
+## 👤 Autori
+- **Endrit Menxhiqi** - [GitHub](https://github.com/endritmmenxhiqi)
 
 ---
-
-## 📂 Struktura e Projektit
-
-- `src/app/` - Rrugët e aplikacionit (App Router)
-- `src/components/` - Komponentët e ripërdorshëm (UI & Business Logic)
-- `src/lib/services/` - Shërbimet e centralizuara (Stock, API layer)
-- `supabase/` - Skriptet e bazës së të dhënave dhe migrimet
-
----
-
-## 🛡️ Hardening & Optimization (Përditësimi i Fundit)
-Në versionin e fundit kemi përmirësuar:
-1. **Atomic Stock Updates:** Tani përditësimet e stokut bëhen përmes funksioneve në nivel database (SQL RPC) për të shmangur gabimet në transaksione simultane.
-2. **UX Empty States:** Çdo tabelë tani ka një gjendje vizuale të qartë kur nuk ka të dhëna.
-3. **Refaktoring:** Logjika e biznesit është ndarë nga komponentët UI për mirëmbajtje më të lehtë.
-
----
-
-Prodhuar me ❤️ nga Antigravity ERP Team.
+© 2026 ERP System - All Rights Reserved.
