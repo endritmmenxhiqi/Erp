@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://antigravity-erp.com",
-        "X-Title": "Anti-Gravity ERP",
+        "X-Title": "ERP System",
       },
       body: JSON.stringify({
         model: "google/gemini-2.0-flash-001",

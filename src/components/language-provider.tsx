@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState } from "react"
+import React, { createContext, useContext, useState, useEffect } from "react"
 
 type Language = "sq" | "en"
 
@@ -72,6 +72,7 @@ const translations = {
     sales_book: "Libri i Shitjes",
     purchases_book: "Libri i Blerjes",
     consumption: "Harxhimi",
+    products: "Produktet",
     
     // Fields
     invoice_number: "Numri i Faturës",
@@ -86,23 +87,69 @@ const translations = {
     type: "Lloji",
     product: "Mall",
     service: "Shërbim",
+    barcode: "Barkodi",
+    price: "Çmimi",
+    selling_price: "Çmimi i Shitjes",
+    cost_price: "Çmimi i Blerjes",
+    available_stock: "Stoku në Gjendje",
+    subtotal: "Nëntotali",
+    vat_amount: "Shuma e TVSH",
+    grand_total: "TOTALI",
+    
+    // Units
+    unit_cope: "copë",
+    unit_kg: "kg",
+    unit_liter: "litër",
+    unit_meter: "metër",
     
     // Actions
     add_purchase: "Regjistro Blerjen",
     add_sale: "Regjistro Shitjen",
     print: "Printo",
+    reprint: "Ri-printo",
     manual_entry: "Hyrje Manuale",
     ai_extract: "Nxirr me AI",
     confirm_vat: "Konfirmo Ndryshimin e TVSH",
     confirm_vat_desc: "A jeni të sigurt që dëshironi të ndryshoni normën e TVSH për këtë faturë?",
+    add_item: "Shto Artikull",
+    register_sale_btn: "Regjistro Shitjen",
+    register_purchase_btn: "Regjistro Blerjen",
+    processing: "Duke u procesuar...",
+    confirm: "Konfirmo",
+    cancel: "Anulo",
+    back: "Kthehu",
+    save: "Ruaj",
+    close: "Mbyll",
+    delete: "Fshij",
+    pastro: "Pastro",
+    reset: "Reset",
     
-    // Sales Book
+    // Validation
+    val_invoice_required: "Numri i faturës është i detyrueshme",
+    val_date_required: "Data është e detyrueshme",
+    val_total_gt_zero: "Totali duhet të jetë më i madh se 0",
+    val_vat_negative: "TVSH nuk mund të jetë negative",
+    val_vat_max: "TVSH nuk mund të jetë mbi 100%",
+    val_item_required: "Shkruani emrin e artikullit",
+    val_qty_gt_zero: "Sasia duhet të jetë më e madhe se 0",
+    val_unit_required: "Njësia është e detyrueshme",
+    val_at_least_one: "Shtoni të paktën një artikull",
+    val_stock_insufficient: "Nuk ka stok të mjaftueshëm",
+    
+    // Books
     serial_number: "Nr.",
     details: "Detajet",
-    reprint: "Ri-printo",
     summary: "Përmbledhja",
     grouped_by_date: "Grupimi sipas Datës",
     view_invoice: "Shiko Faturën",
+    monthly_summary: "Përmbledhja Mujore",
+    period_filters: "Filtrat e Periudhës",
+    from_date: "Prej Datës",
+    to_date: "Deri në Datën",
+    year: "Viti",
+    no_sales_found: "S'u gjet asnjë shitje",
+    no_purchases_found: "S'u gjet asnjë blerje",
+    old_record_note: "Ky rekord nuk ka detaje të artikujve (i regjistruar para përditësimit).",
   },
   en: {
     // Auth
@@ -165,6 +212,7 @@ const translations = {
     sales_book: "Sales Book",
     purchases_book: "Purchases Book",
     consumption: "Consumption",
+    products: "Products",
     
     // Fields
     invoice_number: "Invoice Number",
@@ -179,38 +227,85 @@ const translations = {
     type: "Type",
     product: "Product",
     service: "Service",
+    barcode: "Barcode",
+    price: "Price",
+    selling_price: "Selling Price",
+    cost_price: "Cost Price",
+    available_stock: "Available Stock",
+    subtotal: "Subtotal",
+    vat_amount: "VAT Amount",
+    grand_total: "TOTAL",
+    
+    // Units
+    unit_cope: "pcs",
+    unit_kg: "kg",
+    unit_liter: "liter",
+    unit_meter: "meter",
     
     // Actions
-    add_purchase: "Add Purchase",
-    add_sale: "Add Sale",
+    add_purchase: "Register Purchase",
+    add_sale: "Register Sale",
     print: "Print",
+    reprint: "Re-print",
     manual_entry: "Manual Entry",
     ai_extract: "AI Extract",
     confirm_vat: "Confirm VAT Change",
     confirm_vat_desc: "Are you sure you want to change the VAT rate for this invoice?",
+    add_item: "Add Item",
+    register_sale_btn: "Register Sale",
+    register_purchase_btn: "Register Purchase",
+    processing: "Processing...",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    back: "Back",
+    save: "Save",
+    close: "Close",
+    delete: "Delete",
+    pastro: "Clear",
+    reset: "Reset",
     
-    // Sales Book
+    // Validation
+    val_invoice_required: "Invoice number is required",
+    val_date_required: "Date is required",
+    val_total_gt_zero: "Total must be greater than 0",
+    val_vat_negative: "VAT cannot be negative",
+    val_vat_max: "VAT cannot be over 100%",
+    val_item_required: "Enter item name",
+    val_qty_gt_zero: "Quantity must be greater than 0",
+    val_unit_required: "Unit is required",
+    val_at_least_one: "Add at least one item",
+    val_stock_insufficient: "Insufficient stock available",
+    
+    // Books
     serial_number: "No.",
     details: "Details",
-    reprint: "Re-print",
     summary: "Summary",
     grouped_by_date: "Grouped by Date",
     view_invoice: "View Invoice",
+    monthly_summary: "Monthly Summary",
+    period_filters: "Period Filters",
+    from_date: "From Date",
+    to_date: "To Date",
+    year: "Year",
+    no_sales_found: "No sales found",
+    no_purchases_found: "No purchases found",
+    old_record_note: "This record has no item details (registered before update).",
   }
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("app-language") as Language
-      if (saved && (saved === "sq" || saved === "en")) {
-        return saved
-      }
+  const [language, setLanguage] = useState<Language>("sq")
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+    const saved = localStorage.getItem("app-language") as Language
+    if (saved && (saved === "sq" || saved === "en")) {
+      setLanguage(saved)
     }
-    return "sq"
-  })
+  }, [])
 
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang)

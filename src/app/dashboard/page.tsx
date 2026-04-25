@@ -120,9 +120,9 @@ export default function DashboardPage() {
                     <ShieldCheck className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Status</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">{t("type")}</div>
                     <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 uppercase tracking-widest mt-1">
-                      Active
+                      {t("auth.success_login").split('!')[0]}
                     </div>
                   </div>
                 </div>
@@ -134,8 +134,8 @@ export default function DashboardPage() {
         {/* Account Info */}
         <Card className="glass border-border shadow-2xl">
           <CardHeader className="p-8">
-            <CardTitle className="text-xl font-bold text-foreground">Account</CardTitle>
-            <CardDescription className="text-muted-foreground">Credentials</CardDescription>
+            <CardTitle className="text-xl font-bold text-foreground">{t("acc_settings")}</CardTitle>
+            <CardDescription className="text-muted-foreground">{t("settings")}</CardDescription>
           </CardHeader>
           <CardContent className="p-8 pt-0 space-y-6">
             <div>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
               <div className="text-sm font-medium text-foreground break-all">{profile?.email}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Member Since</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">{t("date")}</div>
               <div className="text-sm font-medium text-foreground">
                 {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '...'}
               </div>

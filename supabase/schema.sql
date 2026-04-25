@@ -31,9 +31,13 @@ create table public.stock (
   item_name text not null,
   quantity decimal(12,3) default 0,
   unit text default 'copë',
+  barcode text,
+  selling_price decimal(12,2),
   user_id uuid references auth.users on delete cascade not null,
   unique(item_name, user_id)
 );
+
+create index idx_stock_barcode on public.stock(barcode);
 
 -- Enable RLS
 alter table public.sales enable row level security;

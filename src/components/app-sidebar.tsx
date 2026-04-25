@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "./theme-toggle"
 import { LanguageToggle } from "./language-toggle"
-import { useTranslation } from "./language-provider"
+import { useTranslation } from "@/components/language-provider"
 
 interface SidebarProps {
   email: string
@@ -34,7 +34,6 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
     ? [
         { name: t("dashboard"), href: "/admin", icon: LayoutDashboard },
         { name: t("user_mgmt"), href: "/admin/users", icon: Users },
-        { name: t("reports"), href: "/admin/reports", icon: BarChart3 },
         { name: t("settings"), href: "/admin/settings", icon: Settings },
       ]
     : [
@@ -44,10 +43,11 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
         { name: t("sales"), href: "/dashboard/sales", icon: Users },
         { name: t("sales_book"), href: "/dashboard/sales-book", icon: FileText },
         { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
+        { name: t("products"), href: "/dashboard/products", icon: Rocket },
       ]
 
   return (
-    <div className="w-72 h-screen flex flex-col bg-sidebar dark:bg-[#0a0a0c] border-r border-border sticky top-0 overflow-hidden">
+    <div className="w-72 h-screen flex flex-col bg-sidebar dark:bg-[#0a0a0c] border-r border-border sticky top-0 overflow-hidden print:hidden">
       {/* Brand */}
       <div className="p-8">
         <div className="flex items-center space-x-3 group cursor-pointer">
@@ -55,8 +55,8 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
             <Rocket className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <div className="text-lg font-bold text-foreground tracking-tight leading-none group-hover:text-primary transition-colors">Anti-Gravity</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1">AI-ERP System</div>
+            <div className="text-lg font-bold text-foreground tracking-tight leading-none group-hover:text-primary transition-colors">{t("dashboard")}</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1">{t("business_dashboard")}</div>
           </div>
         </div>
       </div>

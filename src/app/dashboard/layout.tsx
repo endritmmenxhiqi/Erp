@@ -30,7 +30,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, ai_enabled')
     .eq('id', user.id)
     .single()
 
@@ -42,17 +42,32 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background print:block print:bg-white print:min-h-0 print:h-auto">
       <AppSidebar 
         email={user.email!} 
         role={profile?.role || 'user'} 
         signOutAction={signOut} 
       />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 sm:p-12 max-w-7xl mx-auto">
+      <main className="flex-1 overflow-y-auto print:overflow-visible print:p-0">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            @page { margin: 0; }
+            body { margin: 0; padding: 0; }
+            .print-padding { padding: 15mm !important; }
+          }
+        `}} />
+        <div className="p-8 sm:p-12 max-w-7xl mx-auto print:p-0 print:max-w-none">
+          <div className="hidden print:block print-padding">
+            {/* This will wrap children only in print if we use a specific class, 
+                but let's just apply it directly to children's container */}
+          </div>
           {children}
         </div>
-        <ChatDB />
+        {profile?.ai_enabled && (
+          <div className="print:hidden">
+            <ChatDB />
+          </div>
+        )}
       </main>
     </div>
   )

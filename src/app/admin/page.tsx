@@ -2,138 +2,87 @@
 
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Mail, Clock, Hash, Shield, Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Users, Shield, Sparkles, TrendingUp, Briefcase } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
-
-interface Profile {
-  id: string
-  business_name: string
-  email: string
-  fiscal_number: string
-  role: string
-  created_at: string
-}
+import Link from "next/link"
 
 export default function AdminPage() {
-  const { t, language } = useTranslation()
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const { t } = useTranslation()
+  const [stats, setStats] = useState({
+    totalBusinesses: 0,
+    aiEnabled: 0,
+  })
   const supabase = createClient()
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10)
-      if (data) setProfiles(data as Profile[])
+      const { data } = await supabase.from('profiles').select('id, ai_enabled')
+      if (data) {
+        setStats({
+          totalBusinesses: data.length,
+          aiEnabled: data.filter(p => p.ai_enabled).length,
+        })
+      }
     }
     load()
   }, [supabase])
 
   return (
-    <div className="space-y-12">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-destructive font-bold text-sm tracking-widest uppercase">
-            <Shield className="w-4 h-4" />
-            <span>{t("admin_panel")}</span>
-          </div>
-          <h2 className="text-5xl font-extrabold tracking-tight text-foreground leading-tight">
-            {t("system_mgmt")}
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-xl">
-            {t("dashboard_desc")}
-          </p>
+    <div className="space-y-12 animate-in fade-in duration-500">
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2 text-destructive font-bold text-sm tracking-widest uppercase">
+          <Shield className="w-4 h-4" />
+          <span>{t("admin_panel")}</span>
         </div>
-        <div className="w-full sm:w-auto">
-           <div className="relative group">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
-             <Input 
-                placeholder={t("search_businesses")}
-                className="pl-10 h-12 bg-accent/20 border-border focus:border-primary/30 w-full sm:w-64 rounded-xl"
-             />
-           </div>
-        </div>
+        <h2 className="text-5xl font-extrabold tracking-tight text-foreground leading-tight">
+          {t("dashboard")}
+        </h2>
+        <p className="text-muted-foreground text-lg max-w-xl">
+          Mirësevini në panelin e kontrollit të sistemit.
+        </p>
       </div>
 
-      <div className="grid gap-8">
-        <Card className="glass border-border shadow-3xl overflow-hidden pt-2">
-          <div className="h-1 w-full bg-gradient-to-r from-destructive via-red-500 to-transparent" />
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <Link href="/admin/users">
+          <Card className="glass border-border shadow-xl hover:scale-[1.02] transition-all cursor-pointer group">
+            <CardHeader className="p-8">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive group-hover:bg-destructive group-hover:text-white transition-all">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div className="text-3xl font-black">{stats.totalBusinesses}</div>
+              </div>
+              <CardTitle className="mt-6">{t("user_mgmt")}</CardTitle>
+              <CardDescription>Menaxhoni të gjitha bizneset e regjistruara.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Card className="glass border-border shadow-xl">
           <CardHeader className="p-8">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl font-bold text-foreground flex items-center">
-                  <Users className="w-6 h-6 mr-3 text-destructive" />
-                  {t("recent_registrations")}
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-1">
-                   {language === 'sq' ? 'Lista e bizneseve që janë bashkuar së fundmi' : 'List of recently joined businesses'}
-                </CardDescription>
+              <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-600">
+                <Sparkles className="w-6 h-6" />
               </div>
-              <div className="px-4 py-2 rounded-xl bg-accent/20 border border-border text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                {t("total")}: {profiles.length}
-              </div>
+              <div className="text-3xl font-black">{stats.aiEnabled}</div>
             </div>
+            <CardTitle className="mt-6">AI të Aktivizuara</CardTitle>
+            <CardDescription>Numri i bizneseve që kanë qasje në AI.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="relative w-full overflow-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-accent/10 border-y border-border">
-                    <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">{t("business_name")}</th>
-                    <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Email</th>
-                    <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">{t("fiscal_number")}</th>
-                    <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Role</th>
-                    <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {profiles.map((p) => (
-                    <tr key={p.id} className="group hover:bg-accent/5 transition-colors">
-                      <td className="p-8 align-middle">
-                        <div className="flex items-center space-x-3">
-                           <div className="w-10 h-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive font-bold group-hover:scale-110 transition-transform">
-                             {p.business_name[0].toUpperCase()}
-                           </div>
-                           <div className="font-bold text-foreground transition-colors">{p.business_name}</div>
-                        </div>
-                      </td>
-                      <td className="p-8 align-middle text-zinc-500">
-                         <div className="flex items-center">
-                           <Mail className="w-3.5 h-3.5 mr-2 text-zinc-400" />
-                           {p.email}
-                         </div>
-                      </td>
-                      <td className="p-8 align-middle font-mono text-zinc-500 tracking-tighter text-xs">
-                         <div className="flex items-center">
-                            <Hash className="w-3.5 h-3.5 mr-2 text-zinc-400" />
-                            {p.fiscal_number}
-                         </div>
-                      </td>
-                      <td className="p-8 align-middle">
-                        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors ${
-                          p.role === 'admin' 
-                            ? 'bg-destructive/10 text-destructive border-destructive/20' 
-                            : 'bg-primary/10 text-primary border-primary/20'
-                        }`}>
-                          {p.role}
-                        </div>
-                      </td>
-                      <td className="p-8 align-middle text-zinc-500">
-                        <div className="flex items-center">
-                           <Clock className="w-3.5 h-3.5 mr-2 text-zinc-400" />
-                           {new Date(p.created_at).toLocaleDateString()}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        </Card>
+
+        <Card className="glass border-border shadow-xl">
+          <CardHeader className="p-8">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div className="text-3xl font-black">100%</div>
             </div>
-          </CardContent>
+            <CardTitle className="mt-6">Uptime i Sistemit</CardTitle>
+            <CardDescription>Statusi i performancës së serverit.</CardDescription>
+          </CardHeader>
         </Card>
       </div>
     </div>

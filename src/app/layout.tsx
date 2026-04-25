@@ -8,8 +8,8 @@ import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "Anti-Gravity AI-ERP",
-  description: "Next Generation AI-ERP System",
+  title: "ERP System",
+  description: "Advanced Business Management System",
 };
 
 export default function RootLayout({

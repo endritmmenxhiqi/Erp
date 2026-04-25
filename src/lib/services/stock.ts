@@ -13,7 +13,7 @@ export const StockService = {
    * @param unit The unit of measurement
    * @param userId The ID of the user owning the stock
    */
-  async updateStock(itemName: string, quantityChange: number, unit: string, userId: string) {
+  async updateStock(itemName: string, quantityChange: number, unit: string, userId: string, barcode?: string, sellingPrice?: number) {
     const supabase = createClient()
     
     // We use the RPC 'handle_stock_update' which we defined in SQL.
@@ -22,7 +22,9 @@ export const StockService = {
       p_item_name: itemName,
       p_quantity_change: quantityChange,
       p_unit: unit,
-      p_user_id: userId
+      p_user_id: userId,
+      p_barcode: barcode || null,
+      p_selling_price: sellingPrice || null
     })
 
     if (error) {
@@ -45,5 +47,60 @@ export const StockService = {
 
     if (error) throw error
     return data || []
+  },
+
+  /**
+   * Fetches an item from stock by its barcode.
+   */
+  async getStockByBarcode(barcode: string) {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .eq("barcode", barcode)
+      .maybeSingle()
+
+    if (error) {
+      console.error('StockService.getStockByBarcode error:', error)
+      throw error
+    }
+    return data
+  },
+
+  /**
+   * Fetches an item from stock by its name.
+   */
+  async getItemByName(itemName: string) {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .eq("item_name", itemName)
+      .maybeSingle()
+
+    if (error) {
+      console.error('StockService.getItemByName error:', error)
+      throw error
+    }
+    return data
+  },
+
+  /**
+   * Updates basic product info (barcode and selling price).
+   */
+  async updateProduct(id: string, updates: { barcode?: string, selling_price?: number }) {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("stock")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('StockService.updateProduct error:', error)
+      throw error
+    }
+    return data
   }
 }
