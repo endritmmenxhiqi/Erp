@@ -235,7 +235,7 @@ export default function SalesBookPage() {
           <div className="flex flex-wrap gap-6 items-end">
             <div className="space-y-2">
               <label className="text-[10px] uppercase font-bold text-muted-foreground px-1">{t("year")}</label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <Select value={selectedYear} onValueChange={(val) => val && setSelectedYear(val)}>
                 <SelectTrigger className="h-11 w-32 bg-background/50 border-border rounded-xl font-bold">
                   <SelectValue placeholder={t("year")} />
                 </SelectTrigger>
