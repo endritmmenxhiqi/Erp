@@ -369,7 +369,7 @@ export default function SalesPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">{t("type")}</FormLabel>
-                      <Select onValueChange={(val) => val && field.onChange(val)} defaultValue={field.value}>
+                      <Select onValueChange={(val: string | null) => { if (val) field.onChange(val) }} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-11 bg-background/50">
                             <SelectValue placeholder={t("type")} />
