@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/spinner"
-import { Package, Search, Barcode, Tag, Save, CheckCircle2 } from "lucide-react"
+import { Package, Search, Barcode, Tag, Save, CheckCircle2, RefreshCw, Wand2 } from "lucide-react"
 import { EmptyState } from "@/components/EmptyState"
 import { toast } from "sonner"
 
@@ -18,6 +18,15 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+
+  // Generates a random EAN-13 style barcode
+  const generateBarcode = (): string => {
+    const digits = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10))
+    // EAN-13 checksum
+    const checksum = (10 - (digits.reduce((sum, d, i) => sum + d * (i % 2 === 0 ? 1 : 3), 0) % 10)) % 10
+    return [...digits, checksum].join('')
+  }
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true)
@@ -35,17 +44,34 @@ export default function ProductsPage() {
     fetchProducts()
   }, [fetchProducts])
 
-  const handleUpdate = async (id: string, barcode: string, selling_price: number) => {
-    setSavingId(id)
+  const handleUpdate = async (id: any, barcode: string, selling_price: number) => {
+    const idStr = String(id)
+    setSavingId(idStr)
     try {
-      await StockService.updateProduct(id, { barcode, selling_price })
+      await StockService.updateProduct(idStr, { barcode, selling_price })
       toast.success("Produkti u përditësua me sukses")
-      // Update local state to reflect changes
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, barcode, selling_price } : p))
+      setProducts(prev => prev.map(p => String(p.id) === idStr ? { ...p, barcode, selling_price } : p))
     } catch (err) {
+      console.error("handleUpdate error:", err)
       toast.error("Gabim gjatë përditësimit")
     } finally {
       setSavingId(null)
+    }
+  }
+
+  const handleGenerateBarcode = async (id: any) => {
+    const idStr = String(id)
+    setGeneratingId(idStr)
+    try {
+      const newBarcode = generateBarcode()
+      await StockService.updateProduct(idStr, { barcode: newBarcode })
+      setProducts(prev => prev.map(p => String(p.id) === idStr ? { ...p, barcode: newBarcode } : p))
+      toast.success(`Barkodi u gjenerua: ${newBarcode}`)
+    } catch (err) {
+      console.error("handleGenerateBarcode error:", err)
+      toast.error("Gabim gjatë gjenerimit të barkodit")
+    } finally {
+      setGeneratingId(null)
     }
   }
 
@@ -111,14 +137,28 @@ export default function ProductsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center">
-                          <Barcode className="w-4 h-4 mr-2 text-primary opacity-70" />
-                          <Input 
-                            value={product.barcode || ""} 
-                            onChange={(e) => handleLocalChange(product.id, "barcode", e.target.value)}
-                            className="h-9 bg-background/50 border-border/50 focus:border-primary font-mono text-sm"
-                            placeholder="Shkruaj barkodin"
-                          />
+                        <div className="flex items-center gap-2">
+                          <Barcode className="w-4 h-4 text-primary opacity-70 shrink-0" />
+                          <div className="flex items-center gap-1 flex-1">
+                            <Input 
+                              value={product.barcode || ""} 
+                              onChange={(e) => handleLocalChange(product.id, "barcode", e.target.value)}
+                              className="h-9 bg-background/50 border-border/50 focus:border-primary font-mono text-sm"
+                              placeholder="—"
+                              readOnly={false}
+                            />
+                            <button
+                              type="button"
+                              title="Gjeneroni barkod automatikisht"
+                              onClick={() => handleGenerateBarcode(product.id)}
+                              disabled={generatingId === product.id}
+                              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/15 text-primary transition-colors disabled:opacity-50"
+                            >
+                              {generatingId === product.id
+                                ? <RefreshCw className="h-4 w-4 animate-spin" />
+                                : <Wand2 className="h-4 w-4" />}
+                            </button>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>

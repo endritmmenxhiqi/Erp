@@ -34,4 +34,4 @@ Demonstrimi do të ndiqet në këtë renditje (Flow):
 ## 5. Plani B (Nëse live demo dështon)
 - **Video Recording:** Një video e regjistruar paraprakisht e të gjithë flow-it kryesor (Screen Recording).
 - **Localhost:** Gatishmëria për të vrapuar projektin lokalisht nëse serveri i Vercel ka probleme.
-- **Screenshots:** Një dokument PDF me screenshot-et e secilit hap të procesit.
+.

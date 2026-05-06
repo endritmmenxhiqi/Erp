@@ -90,10 +90,11 @@ export const StockService = {
    */
   async updateProduct(id: string, updates: { barcode?: string, selling_price?: number }) {
     const supabase = createClient()
+    const numericId = Number(id)
     const { data, error } = await supabase
       .from("stock")
       .update(updates)
-      .eq("id", id)
+      .eq("id", numericId)
       .select()
       .single()
 

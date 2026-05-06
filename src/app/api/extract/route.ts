@@ -1,6 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const AI_TIMEOUT_MS = 35000;
+
+export const runtime = "nodejs";
+export const maxDuration = 45;
+
+type UploadedFile = {
+  buffer: Buffer;
+  mimeType: string;
+  size: number;
+};
+
+async function readUploadedFile(req: NextRequest): Promise<UploadedFile> {
+  const contentType = req.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await req.formData();
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
+      throw new Error("Asnje skedar nuk u ngarkua");
+    }
+
+    return {
+      buffer: Buffer.from(await file.arrayBuffer()),
+      mimeType: file.type,
+      size: file.size,
+    };
+  }
+
+  if (contentType.includes("application/json")) {
+    const body = await req.json().catch(() => null);
+    const image = body?.image;
+
+    if (typeof image !== "string") {
+      throw new Error("Asnje skedar nuk u ngarkua");
+    }
+
+    const match = image.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error("Formati i fotos nuk eshte valid");
+    }
+
+    const buffer = Buffer.from(match[2], "base64");
+
+    return {
+      buffer,
+      mimeType: match[1],
+      size: buffer.length,
+    };
+  }
+
+  throw new Error("Formati i kerkeses nuk perkrahet");
+}
+
+function parseJsonResponse(responseText: string) {
+  const cleaned = responseText
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  return JSON.parse(cleaned);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,14 +73,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mungon OpenRouter API Key ne .env.local" }, { status: 500 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get("file");
+    const file = await readUploadedFile(req);
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Asnje skedar nuk u ngarkua" }, { status: 400 });
-    }
-
-    if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+    if (!file.mimeType.startsWith("image/") && file.mimeType !== "application/pdf") {
       return NextResponse.json({ error: "Ngarkoni vetem imazh ose PDF." }, { status: 400 });
     }
 
@@ -24,8 +83,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Skedari eshte shume i madh. Kufiri eshte 5MB." }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const base64Data = buffer.toString("base64");
+    const base64Data = file.buffer.toString("base64");
 
     const prompt = `
       Extract information from this invoice image.
@@ -39,12 +97,14 @@ export async function POST(req: NextRequest) {
           {
             "item_name": "string",
             "quantity": number,
-            "unit": "string"
+            "unit": "string",
+            "cost_price": number
           }
         ]
       }
       If a value is not found, use null or empty string.
       For items, if the unit is not clear, use 'cope'.
+      For cost_price, use the item unit price if visible; otherwise use 0.
       The language of the invoice might be Albanian or English.
       Return ONLY the JSON object, no other text.
     `;
@@ -70,7 +130,7 @@ export async function POST(req: NextRequest) {
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:${file.type};base64,${base64Data}`,
+                  url: `data:${file.mimeType};base64,${base64Data}`,
                 },
               },
             ],
@@ -78,14 +138,26 @@ export async function POST(req: NextRequest) {
         ],
         response_format: { type: "json_object" },
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     });
 
     if (!response.ok) {
       const errorPayload = await response.json().catch(() => null);
+      const upstreamMessage = errorPayload?.error?.message || "Procesimi me AI deshtoi.";
+
+      if (response.status === 401) {
+        return NextResponse.json(
+          {
+            error:
+              "OpenRouter API key nuk eshte valid ose mungon ne Vercel. Kontrollo OPENROUTER_API_KEY te Environment Variables.",
+          },
+          { status: 502 }
+        );
+      }
+
       return NextResponse.json(
-        { error: errorPayload?.error?.message || "Procesimi me AI deshtoi." },
-        { status: response.status }
+        { error: upstreamMessage },
+        { status: response.status >= 500 ? 502 : response.status }
       );
     }
 
@@ -100,13 +172,13 @@ export async function POST(req: NextRequest) {
       throw new Error("AI nuk ktheu te dhena te lexueshme.");
     }
 
-    const extractedData = JSON.parse(responseText);
+    const extractedData = parseJsonResponse(responseText);
 
     return NextResponse.json(extractedData);
   } catch (error: unknown) {
     console.error("Extraction error:", error);
     const message =
-      error instanceof Error && error.name === "TimeoutError"
+      error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")
         ? "Procesimi me AI po zgjat shume. Provoni perseri pas pak."
         : error instanceof Error
           ? error.message

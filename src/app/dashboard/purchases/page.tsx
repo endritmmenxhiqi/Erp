@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, type ChangeEvent } from "react"
+import type { User } from "@supabase/supabase-js"
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,30 +13,90 @@ import { z } from "zod"
 import { toast } from "sonner"
 import { createClient } from "@/utils/supabase/client"
 import { Spinner } from "@/components/spinner"
-import { AlertCircle, FileUp, Plus, Save, Trash2, Package } from "lucide-react"
+import { AlertCircle, FileUp, Plus, Save, Trash2, Package, X, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StockService } from "@/lib/services/stock"
 
 import { MAX_INVOICE_LENGTH, MAX_ITEMS, MAX_FILE_SIZE } from "@/lib/constants"
+
+type Profile = {
+  ai_enabled?: boolean | null
+}
+
+type ExtractedItem = {
+  item_name?: string | null
+  description?: string | null
+  quantity?: number | string | null
+  unit?: string | null
+  cost_price?: number | string | null
+  price?: number | string | null
+}
+
+type ExtractedInvoice = {
+  error?: string
+  invoice_num?: string | null
+  date?: string | null
+  seller_fiscal_num?: string | null
+  total_cost?: number | string | null
+  total_amount?: number | string | null
+  items?: ExtractedItem[] | null
+}
+
+function isExpiredSessionError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.message.includes("Invalid Refresh Token") ||
+      error.message.includes("Refresh Token Not Found") ||
+      error.message.includes("Auth session missing"))
+  )
+}
 
 export default function PurchasesPage() {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [formError, setFormError] = useState("")
-  const [profile, setProfile] = useState<any>(null)
-  const supabase = createClient()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [supabase] = useState(() => createClient())
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
+  const [invoicePreview, setInvoicePreview] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchProfile() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-        setProfile(data)
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) throw error
+
+        if (user) {
+          const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+          setProfile(data)
+        }
+      } catch (error: unknown) {
+        if (isExpiredSessionError(error)) {
+          await supabase.auth.signOut({ scope: "local" }).catch(() => undefined)
+        }
+        setProfile(null)
       }
     }
     fetchProfile()
   }, [supabase])
+
+  async function getCurrentUser(): Promise<User> {
+    const { data: { user }, error } = await supabase.auth.getUser()
+
+    if (error) {
+      if (isExpiredSessionError(error)) {
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined)
+      }
+      throw new Error("Sesioni ka skaduar. Ju lutem hyni perseri.")
+    }
+
+    if (!user) {
+      throw new Error("User not found. Ju lutem hyni perseri.")
+    }
+
+    return user
+  }
 
   const purchaseSchema = z.object({
     invoice_num: z.string().trim().min(1, t("val_invoice_required")).max(MAX_INVOICE_LENGTH, "Too long"),
@@ -84,6 +145,20 @@ export default function PurchasesPage() {
     form.setValue("total_cost", parseFloat(total.toFixed(2)), { shouldValidate: true })
   }, [watchedItems, form])
 
+  const handleInvoiceImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Imazhi është shumë i madh (max 5MB)")
+      return
+    }
+    setInvoiceFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setInvoicePreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+    event.target.value = ""
+  }
+
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -93,41 +168,54 @@ export default function PurchasesPage() {
       return
     }
 
+    // Also set as invoice file for saving
+    setInvoiceFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setInvoicePreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+
     setIsExtracting(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const base64Image = e.target?.result as string
-        const response = await fetch("/api/extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64Image }),
-        })
+      const formData = new FormData()
+      formData.append("file", file)
 
-        if (!response.ok) throw new Error("AI Extraction failed")
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        body: formData,
+      })
 
-        const data = await response.json()
-        if (data.invoice_num) form.setValue("invoice_num", data.invoice_num)
-        if (data.date) form.setValue("date", data.date)
-        if (data.seller_fiscal_num) form.setValue("seller_fiscal_num", data.seller_fiscal_num)
-        if (data.total_amount) form.setValue("total_cost", data.total_amount)
-        
-        if (data.items && data.items.length > 0) {
-          form.setValue("items", data.items.map((item: any) => ({
-            item_name: item.description,
-            quantity: item.quantity || 1,
-            unit: item.unit || "cope",
-            cost_price: item.price || 0
-          })))
-        }
-
-        toast.success("AI Extraction Success!")
+      const data = await response.json().catch(() => null) as ExtractedInvoice | null
+      if (!response.ok) {
+        throw new Error(data?.error || "AI Extraction failed")
       }
-      reader.readAsDataURL(file)
-    } catch (error: any) {
-      toast.error(error.message)
+
+      if (!data) {
+        throw new Error("AI nuk ktheu te dhena te lexueshme.")
+      }
+
+      if (data.invoice_num) form.setValue("invoice_num", data.invoice_num)
+      if (data.date) form.setValue("date", data.date)
+      if (data.seller_fiscal_num) form.setValue("seller_fiscal_num", data.seller_fiscal_num)
+      const extractedTotal = Number(data.total_cost ?? data.total_amount)
+      if (!Number.isNaN(extractedTotal) && extractedTotal > 0) {
+        form.setValue("total_cost", extractedTotal)
+      }
+
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        form.setValue("items", data.items.map((item) => ({
+          item_name: item.item_name || item.description || "",
+          quantity: Number(item.quantity) || 1,
+          unit: item.unit || "cope",
+          cost_price: Number(item.cost_price || item.price) || 0,
+        })))
+      }
+
+      toast.success("AI Extraction Success!")
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI Extraction failed")
     } finally {
       setIsExtracting(false)
+      event.target.value = ""
     }
   }
 
@@ -135,14 +223,28 @@ export default function PurchasesPage() {
     setIsLoading(true)
     setFormError("")
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Session expired")
+      const user = await getCurrentUser()
+
+      // Upload invoice image if present
+      let imageUrl: string | null = null
+      if (invoiceFile) {
+        const ext = invoiceFile.name.split('.').pop() || 'jpg'
+        const filePath = `${user.id}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('invoices')
+          .upload(filePath, invoiceFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('invoices').getPublicUrl(filePath)
+          imageUrl = urlData.publicUrl
+        }
+      }
 
       const { data: purchaseData, error: purchaseError } = await supabase.from("purchases").insert({
         invoice_num: values.invoice_num,
         date: values.date,
         total_cost: values.total_cost,
         seller_fiscal_num: values.seller_fiscal_num,
+        image_url: imageUrl,
         user_id: user.id,
       }).select().single()
 
@@ -177,8 +279,10 @@ export default function PurchasesPage() {
         seller_fiscal_num: "",
         items: [{ item_name: "", quantity: 1, unit: "cope", cost_price: 0 }],
       })
-    } catch (error: any) {
-      toast.error(error.message)
+      setInvoiceFile(null)
+      setInvoicePreview(null)
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Purchase registration failed")
     } finally {
       setIsLoading(false)
     }
@@ -226,10 +330,38 @@ export default function PurchasesPage() {
 
         <Card className={cn("glass border-border shadow-xl", profile?.ai_enabled ? "lg:col-span-2" : "w-full")}>
           <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Plus className="mr-2 h-5 w-5 text-primary" />
-              {t("manual_entry")}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center text-xl">
+                <Plus className="mr-2 h-5 w-5 text-primary" />
+                {t("manual_entry")}
+              </CardTitle>
+              {/* Invoice Image Upload (non-AI) */}
+              <div className="flex items-center gap-3">
+                {invoicePreview ? (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => { setInvoiceFile(null); setInvoicePreview(null) }}
+                      className="absolute -top-2 -right-2 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <img
+                      src={invoicePreview}
+                      alt="Fatura"
+                      className="h-16 w-16 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => window.open(invoicePreview!, '_blank')}
+                    />
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer text-sm font-bold text-primary">
+                    <ImageIcon className="w-4 h-4" />
+                    Ngarko Faturën
+                    <input type="file" accept="image/*" className="hidden" onChange={handleInvoiceImageSelect} />
+                  </label>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Form {...form}>
