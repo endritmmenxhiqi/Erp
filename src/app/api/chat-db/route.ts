@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { message } = parsed.data;
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     const supabase = await createClient();
     const {
       data: { user },
@@ -66,17 +66,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (!apiKey) {
-      return NextResponse.json({ error: "Mungon OPENROUTER_API_KEY ne .env.local" }, { status: 500 });
+      return NextResponse.json({ error: "Mungon OPENAI_API_KEY ne .env.local" }, { status: 500 });
     }
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     const aiData = await response.json();
 
     if (aiData.error) {
-      throw new Error(aiData.error.message || "Gabim nga OpenRouter");
+      throw new Error(aiData.error.message || "Gabim nga OpenAI");
     }
 
     const rawContent = aiData.choices?.[0]?.message?.content?.trim()?.replace(/```json|```/g, "");

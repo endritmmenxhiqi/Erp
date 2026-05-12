@@ -68,9 +68,9 @@ function parseJsonResponse(responseText: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "Mungon OpenRouter API Key ne .env.local" }, { status: 500 });
+      return NextResponse.json({ error: "Mungon OpenAI API Key ne .env.local" }, { status: 500 });
     }
 
     const file = await readUploadedFile(req);
@@ -109,16 +109,14 @@ export async function POST(req: NextRequest) {
       Return ONLY the JSON object, no other text.
     `;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://antigravity-erp.com",
-        "X-Title": "ERP System",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
+        model: "gpt-4o",
         messages: [
           {
             role: "user",
@@ -149,7 +147,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "OpenRouter API key nuk eshte valid ose mungon ne Vercel. Kontrollo OPENROUTER_API_KEY te Environment Variables.",
+              "OpenAI API key nuk eshte valid ose mungon ne Vercel. Kontrollo OPENAI_API_KEY te Environment Variables.",
           },
           { status: 502 }
         );
@@ -164,7 +162,7 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
 
     if (data.error) {
-      throw new Error(data.error.message || "Gabim nga OpenRouter");
+      throw new Error(data.error.message || "Gabim nga OpenAI");
     }
 
     const responseText = data.choices?.[0]?.message?.content;
