@@ -25,9 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { FileText, Calendar, ChevronRight, Printer, Receipt, Filter } from "lucide-react"
+import { FileText, Calendar, ChevronRight, Printer, Receipt, Filter, Trash2 } from "lucide-react"
 import { EmptyState } from "@/components/EmptyState"
 import { Spinner } from "@/components/spinner"
+import { toast } from "sonner"
+import { StockService } from "@/lib/services/stock"
 
 interface Sale {
   id: number
@@ -73,6 +75,7 @@ export default function SalesBookPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isItemsLoading, setIsItemsLoading] = useState(false)
   const [profile, setProfile] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   // Filters
   const currentYear = new Date().getFullYear().toString()
@@ -171,6 +174,56 @@ export default function SalesBookPage() {
       setSelectedInvoiceItems([])
     }
   }, [selectedInvoice])
+
+  const handleDeleteInvoice = async (sale: Sale) => {
+    if (!confirm(t("confirm_delete_invoice"))) return
+    
+    setIsDeleting(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Session expired")
+
+      // 1. Fetch items of the invoice to revert stock (if it's a Mall type)
+      if (sale.type === "Mall") {
+        let itemsToRevert = selectedInvoiceItems
+        if (itemsToRevert.length === 0) {
+          const { data, error } = await supabase
+            .from('sale_items')
+            .select('*')
+            .eq('sale_id', sale.id)
+          if (error) throw error
+          itemsToRevert = data || []
+        }
+
+        // Revert stock (add the quantities back)
+        for (const item of itemsToRevert) {
+          await StockService.updateStock(
+            item.item_name,
+            item.quantity, // Positive number to add it back to stock
+            item.unit,
+            user.id
+          )
+        }
+      }
+
+      // 2. Delete the invoice from database
+      const { error: deleteError } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', sale.id)
+
+      if (deleteError) throw deleteError
+
+      toast.success(t("invoice_deleted_success"))
+      setSelectedInvoice(null)
+      fetchSales()
+    } catch (err: any) {
+      console.error("Error deleting invoice:", err)
+      toast.error(err.message || "Ndodhi një gabim gjatë fshirjes")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const groupedSales = useMemo(() => {
     return sales.reduce((acc: GroupedSales, sale) => {
@@ -470,6 +523,14 @@ export default function SalesBookPage() {
                </div>
 
                <div className="flex justify-end space-x-4 pt-8 print:hidden">
+                  <Button 
+                    variant="destructive" 
+                    className="h-12 px-6 font-bold rounded-xl flex items-center" 
+                    onClick={() => handleDeleteInvoice(selectedInvoice)}
+                    disabled={isDeleting}
+                  >
+                     <Trash2 className="w-5 h-5 mr-2" /> {isDeleting ? t("processing") : t("delete")}
+                  </Button>
                   <Button variant="outline" className="h-12 border-border" onClick={() => window.print()}>
                      <Printer className="w-5 h-5 mr-2" /> {t("reprint")}
                   </Button>

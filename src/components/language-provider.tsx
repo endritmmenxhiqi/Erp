@@ -121,6 +121,8 @@ const translations = {
     save: "Ruaj",
     close: "Mbyll",
     delete: "Fshij",
+    confirm_delete_invoice: "A jeni të sigurt që dëshironi ta fshini këtë faturë? Ky veprim do të rikthejë produktet e faturës në stok.",
+    invoice_deleted_success: "Fatura u fshi me sukses!",
     pastro: "Pastro",
     reset: "Reset",
     
@@ -261,6 +263,8 @@ const translations = {
     save: "Save",
     close: "Close",
     delete: "Delete",
+    confirm_delete_invoice: "Are you sure you want to delete this invoice? This action will restore the invoice products back to stock.",
+    invoice_deleted_success: "Invoice deleted successfully!",
     pastro: "Clear",
     reset: "Reset",
     

@@ -79,6 +79,8 @@ export default function SalesPage() {
   })
 
   const watchedItems = form.watch("items")
+  const invoiceType = form.watch("type")
+  const hasInsufficientStock = invoiceType === "Mall" && watchedItems?.some((item) => item.item_name && (Number(item.quantity) > (item.available_stock || 0)))
   const vatRate = form.watch("vat_rate") || 0
   
   const subtotal = watchedItems.reduce((acc, item) => {
@@ -97,29 +99,33 @@ export default function SalesPage() {
     })
   }, [calculatedTotal, form])
 
+  const selectedDate = form.watch("date")
+
   useEffect(() => {
     const fetchLastInvoice = async () => {
+      if (!selectedDate) return
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data, error } = await supabase
           .from('sales')
           .select('invoice_num')
           .eq('user_id', user.id)
-          .order('id', { ascending: false })
-          .limit(1)
+          .gte('date', `${selectedDate}T00:00:00`)
+          .lte('date', `${selectedDate}T23:59:59`)
 
         if (data && data.length > 0) {
-          const lastNum = parseInt(data[0].invoice_num)
-          if (!isNaN(lastNum)) {
-            form.setValue("invoice_num", (lastNum + 1).toString())
-          }
+          const numbers = data.map(d => parseInt(d.invoice_num)).filter(n => !isNaN(n))
+          const maxNum = numbers.length > 0 ? Math.max(...numbers) : 0
+          form.setValue("invoice_num", (maxNum + 1).toString())
         } else {
           form.setValue("invoice_num", "1")
         }
       }
     }
     fetchLastInvoice()
+  }, [form, supabase, selectedDate])
 
+  useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -132,7 +138,7 @@ export default function SalesPage() {
       }
     }
     fetchProfile()
-  }, [form, supabase])
+  }, [supabase])
 
   const handleBarcodeSearch = async (index: number, barcode: string, silent = false) => {
     if (!barcode) return
@@ -144,6 +150,13 @@ export default function SalesPage() {
       const data = await StockService.getStockByBarcode(barcode)
 
       if (data && data.user_id === user.id) {
+        if (Number(data.quantity) <= 0) {
+          toast.error(`${t("val_stock_insufficient")}: ${data.item_name} (${t("stock")}: 0)`)
+          form.setValue(`items.${index}.barcode`, "")
+          form.setValue(`items.${index}.item_name`, "")
+          form.setValue(`items.${index}.available_stock`, 0)
+          return
+        }
         form.setValue(`items.${index}.item_name`, data.item_name)
         form.setValue(`items.${index}.unit`, data.unit)
         form.setValue(`items.${index}.price`, data.selling_price || 0)
@@ -158,8 +171,49 @@ export default function SalesPage() {
     }
   }
 
+  const handleItemNameSearch = async (index: number, itemName: string) => {
+    if (!itemName) return
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const data = await StockService.getItemByName(itemName)
+
+      if (data && data.user_id === user.id) {
+        if (Number(data.quantity) <= 0) {
+          toast.error(`${t("val_stock_insufficient")}: ${data.item_name} (${t("stock")}: 0)`)
+          form.setValue(`items.${index}.item_name`, "")
+          form.setValue(`items.${index}.available_stock`, 0)
+          return
+        }
+        form.setValue(`items.${index}.unit`, data.unit)
+        form.setValue(`items.${index}.price`, data.selling_price || 0)
+        form.setValue(`items.${index}.available_stock`, data.quantity)
+        if (data.barcode) {
+          form.setValue(`items.${index}.barcode`, data.barcode)
+        }
+      }
+    } catch (err) {
+      console.error("Item name search error:", err)
+    }
+  }
+
   const handleFormSubmit = async (values: SaleFormValues) => {
     setFormError("")
+
+    // Check if any product has insufficient stock and block submission immediately
+    if (values.type === "Mall") {
+      for (let i = 0; i < values.items.length; i++) {
+        const item = values.items[i]
+        const available = item.available_stock || 0
+        if (item.quantity > available) {
+          toast.error(`${t("val_stock_insufficient")}: ${item.item_name || `Artikulli ${i + 1}`} (${t("stock")}: ${available})`)
+          return
+        }
+      }
+    }
+
     const currentVatRate = values.vat_rate
     const hasChangedVat = currentVatRate !== 18 && currentVatRate !== 0 && currentVatRate !== 8
 
@@ -176,6 +230,37 @@ export default function SalesPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Session expired")
+
+      // Stock Validation
+      if (values.type === "Mall") {
+        const aggregatedQuantities: Record<string, number> = {}
+        for (const item of values.items) {
+          if (item.item_name) {
+            aggregatedQuantities[item.item_name] = (aggregatedQuantities[item.item_name] || 0) + item.quantity
+          }
+        }
+
+        const itemNames = Object.keys(aggregatedQuantities)
+        if (itemNames.length > 0) {
+          const { data: stockData, error: stockError } = await supabase
+            .from('stock')
+            .select('*')
+            .in('item_name', itemNames)
+            .eq('user_id', user.id)
+
+          if (stockError) throw stockError
+
+          const stockMap = new Map(stockData?.map(s => [s.item_name, s.quantity]) || [])
+
+          for (const itemName of itemNames) {
+            const currentStock = Number(stockMap.get(itemName)) || 0
+            const requestedQty = aggregatedQuantities[itemName]
+            if (currentStock < requestedQty) {
+              throw new Error(`${t("val_stock_insufficient")}: ${itemName} (${t("stock")}: ${currentStock})`)
+            }
+          }
+        }
+      }
 
       const { data: saleData, error: saleError } = await supabase.from("sales").insert({
         invoice_num: values.invoice_num,
@@ -404,7 +489,9 @@ export default function SalesPage() {
 
                 <div className="space-y-3">
                   {fields.map((field, index) => {
-                    const isOver = form.watch(`items.${index}.quantity`) > (form.watch(`items.${index}.available_stock`) || 0) && form.watch("type") === "Mall" && (form.watch(`items.${index}.available_stock`) || 0) > 0
+                    const itemName = form.watch(`items.${index}.item_name`)
+                    const availableStock = form.watch(`items.${index}.available_stock`) || 0
+                    const isOver = form.watch("type") === "Mall" && !!itemName && form.watch(`items.${index}.quantity`) > availableStock
                     
                     return (
                       <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-muted/10 rounded-2xl border border-border/30 group animate-in slide-in-from-right-2">
@@ -429,6 +516,7 @@ export default function SalesPage() {
                             {...form.register(`items.${index}.item_name`)}
                             placeholder={t("item_name")}
                             className="h-9 bg-background/50 text-sm font-bold"
+                            onBlur={(e) => handleItemNameSearch(index, e.target.value)}
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -438,6 +526,7 @@ export default function SalesPage() {
                               type="number"
                               step="0.001"
                               min="0.001"
+                              max={form.watch("type") === "Mall" ? (form.watch(`items.${index}.available_stock`) || 0) : undefined}
                               {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
                               className={cn(
                                 "h-9 bg-background/50 text-sm",
@@ -516,7 +605,7 @@ export default function SalesPage() {
                   <Button 
                     type="submit" 
                     className="h-14 px-12 rounded-2xl primary-gradient text-white font-black text-lg shadow-lg shadow-primary/20 flex-1 md:flex-none transition-all active:scale-95" 
-                    disabled={isLoading}
+                    disabled={isLoading || hasInsufficientStock}
                   >
                     {isLoading ? (
                       <><Spinner className="mr-2" /> {t("processing")}</>
