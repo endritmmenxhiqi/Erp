@@ -102,11 +102,24 @@ export async function POST(req: NextRequest) {
           }
         ]
       }
-      If a value is not found, use null or empty string.
-      For items, if the unit is not clear, use 'cope'.
-      For cost_price, use the item unit price if visible; otherwise use 0.
-      The language of the invoice might be Albanian or English.
-      Return ONLY the JSON object, no other text.
+
+      CRITICAL RULES FOR PRICES AND VAT/TVSH:
+      - "total_cost" MUST be the FINAL total amount to pay INCLUDING VAT/TVSH (look for "PËR T'U PAGUAR", "Total", "Totali", "Gjithsej" etc.).
+      - Each item on the invoice may have a DIFFERENT VAT/TVSH rate (e.g. 18%, 8%, 0%). You MUST read the actual TVSH rate for EACH item from the invoice. Do NOT assume all items have the same VAT rate.
+      - For each item's "cost_price": PREFERRED method is to use the per-item line total INCLUDING VAT (often labeled "SHUMA", "Total", "Amount") DIVIDED by the quantity.
+        Example: if SHUMA=778.80 and quantity=2, then cost_price=389.40
+      - FALLBACK: if no line total column exists, read the unit price AND the actual TVSH rate for that specific item, then calculate: cost_price = unit_price * (1 + TVSH_rate/100).
+        Example: unit price=330, that item's TVSH=18%, then cost_price = 330 * 1.18 = 389.40
+        Example: unit price=100, that item's TVSH=8%, then cost_price = 100 * 1.08 = 108.00
+      - Do NOT use the base unit price without VAT. The cost_price must ALWAYS include the item's actual VAT/TVSH.
+      - The sum of (quantity * cost_price) for all items should approximately equal the total_cost.
+
+      OTHER RULES:
+      - If a value is not found, use null or empty string.
+      - For items, if the unit is not clear, use 'cope'.
+      - The language of the invoice might be Albanian or English.
+      - Albanian invoices often use: ÇMIMI UN. (unit price without VAT), TVSH (VAT rate per item), SHUMA (line total with VAT).
+      - Return ONLY the JSON object, no other text.
     `;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {

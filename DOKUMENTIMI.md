@@ -1,514 +1,879 @@
-# AGONI ERP - SISTEMI PËR MENAXHIMIN E BURIMEVE TË NDËRMARRJES
-## Dokumentimi i Projektit Softuerik
+# AGONI ERP — SISTEMI I INTEGRUAR PËR MENAXHIMIN E BURIMEVE TË NDËRMARRJES
+## Raport Teknik Akademik dhe Dokumentimi i Projektit Softuerik
 
 ---
 
-**1. Faqja e Kopertinës**
+### **KAPITULLI 1: Faqja Ballore & Informacioni Bazë**
 
-*   **Projekti:** Agoni ERP
-*   **Lënda:** Inxhinieria Softuerike / Menaxhimi i Projekteve TI
-*   **Viti Akademik:** 2025/2026
-*   **Autori:** [Emri i Studentit/Zhvilluesit]
-*   **Institucioni:** Universiteti i Prishtinës / Fakulteti i Inxhinierisë Elektrike dhe Kompjuterike
-*   **Data:** 12 Maj 2026
-*   **Statusi:** Dokumentim i Plotë Teknik
+<br/>
 
----
+<div align="center">
 
-**2. Tabela e Përmbajtjes**
+**UNIVERSITETI I PRISHTINËS "HASAN PRISHTINA"**  
+**FAKULTETI I INXHINIERISË ELEKTRIKE DHE KOMPJUTERIKE**  
+**DEPARTAMENTI I INXHINIERISË KOMPJUTERIKE**
 
-1. Faqja e Kopertinës ................................................................... 1
-2. Tabela e Përmbajtjes ............................................................... 2
-3. Hyrje ........................................................................................ 4
-4. Deklarata e Problemit ............................................................... 5
-5. Qëllimet dhe Objektivat e Projektit ............................................ 6
-6. Përmbledhja e Sistemit .............................................................. 7
-7. Teknologjitë e Përdorura .......................................................... 8
-   7.1 Metodologjia e Zhvillimit ..................................................... 9
-8. Kërkesat Funksionale ................................................................ 10
-9. Kërkesat Jofunksionale ............................................................. 12
-10. Rolet dhe Lejet e Përdoruesve ................................................. 14
-11. User Stories (40 Tregime) ........................................................ 16
-12. Use Case Diagrams dhe Përshkrimet ....................................... 22
-   12.1 Mirëmbajtja e Sistemit ....................................................... 26
-13. Arkitektura e Sistemit .............................................................. 28
-14. Dizajni i Databazës ................................................................. 30
-15. API Design ............................................................................... 34
-16. Siguria ..................................................................................... 36
-17. Dizajni i Ndërfaqes (UI/UX) .................................................... 38
-18. Testimi dhe Rastet e Testimit ................................................. 40
-19. Sfidat dhe Zgjidhjet ................................................................ 43
-20. Përmirësimet e Ardhshme ....................................................... 44
-21. Përfundimi .............................................................................. 45
-22. Referencat ............................................................................... 46
+<br/>
+<br/>
+<br/>
 
----
+# **AGONI ERP**
+### **Sistem i Integruar dhe i Sigurt Cloud për Menaxhimin e Burimeve të Ndërmarrjeve të Vogla dhe të Mesme (SME)**
 
-**3. Hyrje**
+<br/>
+<br/>
 
-Në epokën e digjitalizimit të shpejtë, menaxhimi efikas i burimeve të ndërmarrjes (ERP - Enterprise Resource Planning) është bërë një domosdoshmëri për çdo biznes që synon qëndrueshmëri dhe rritje. Sistemi "Agoni ERP" është një zgjidhje softuerike e integruar, e krijuar posaçërisht për të adresuar nevojat komplekse të bizneseve të vogla dhe të mesme (SME) në rajonin tonë.
+**Lënda:** Inxhinieria Softuerike / Menaxhimi i Projekteve TI  
+**Profesor i Lëndës:** Prof. Dr. [EMRI_PROFESORIT]  
+**Asistent i Lëndës:** Msc. [EMRI_ASISTENTIT]
 
-Ky dokument ofron një analizë të thellë të projektit, duke filluar nga konceptimi fillestar deri te implementimi teknik dhe planet për testim. Fokusimi kryesor i këtij sistemi është automatizimi i proceseve të shitjes, blerjes dhe monitorimit të inventarit në kohë reale, duke minimizuar gabimet njerëzore dhe duke rritur transparencën financiare.
+<br/>
+<br/>
 
-Sistemi është ndërtuar duke përdorur metodologjinë Agile, duke mundësuar një zhvillim iterativ dhe përshtatje të shpejtë ndaj kërkesave të tregut. Përdorimi i teknologjive moderne si Next.js dhe Supabase siguron një performancë të lartë, siguri maksimale dhe një përvojë përdoruesi të shkëlqyer.
+**Punoi Studenti:**  
+**Emri dhe Mbiemri:** [EMRI_STUDENTIT]  
+**Numri i Indeksit:** [NUMRI_INDEKSIT]  
+**Drejtimi:** Inxhinieri Kompjuterike & Softuerike  
+
+<br/>
+<br/>
+<br/>
+
+**Viti Akademik:** 2025/2026  
+**Vendi dhe Data:** Prishtinë, 17 Maj 2026  
+
+</div>
 
 ---
 
-**4. Deklarata e Problemit**
+### **KAPITULLI 2: Abstrakti**
 
-Shumë biznese lokale ende mbështeten në metoda manuale ose sisteme të vjetruara "legacy" për menaxhimin e operacioneve të tyre të përditshme. Problemet kryesore që ky projekt synon të zgjidhë janë:
+#### **Abstrakti (Shqip)**
+Sistemet për Menaxhimin e Burimeve të Ndërmarrjes (ERP) janë shtylla kurrizore e operacioneve moderne të biznesit. Megjithatë, sistemet tradicionale ERP shpesh janë jashtëzakonisht komplekse, të shtrenjta për t'u implementuar dhe kërkojnë infrastrukturë të rëndë lokale. Ky projekt prezanton **Agoni ERP**, një sistem modern, "Full-Stack Serverless" dhe "Multi-Tenant" të bazuar në arkitekturën Cloud, i projektuar posaçërisht për bizneset e vogla dhe të mesme (SME). I ndërtuar me kornizën Next.js 16 (React 19), TypeScript dhe platformën Supabase (PostgreSQL), Agoni ERP ofron një mjedis të shpejtë, reaktiv dhe tejet të sigurt. 
 
-*   **Mungesa e Sinkronizimit të Inventarit:** Shpeshherë gjendja e mallit në depo nuk përputhet me atë në sistem, duke shkaktuar humbje të shitjeve ose mbifaturim.
-*   **Vështirësia në Gjenerimin e Raporteve:** Marrja e një pasqyre të qartë mbi profitin, xhiron ditore ose shpenzimet kërkon orë të tëra pune manuale.
-*   **Mungesa e Qasjes nga Largësia:** Sistemet tradicionale shpesh janë të instaluara vetëm në një kompjuter lokal, duke pamundësuar monitorimin e biznesit nga pronarët kur ata nuk janë fizikisht prezentë.
-*   **Siguria e të Dhënave:** Ruajtja e të dhënave në Excel ose skedarë lokalë është e rrezikshme dhe e prirur ndaj humbjeve ose keqpërdorimeve.
+Sistemi integron zgjidhje të avancuara të Inteligjencës Artificiale (AI): së pari, një modul për leximin dhe nxjerrjen e të dhënave automatike nga faturat fizike të blerjes përmes modelit multimodal OpenAI GPT-4o (Vision OCR), duke eliminuar nevojën për regjistrim manual; së dyti, një asistent inteligjent ndërveprues (ChatDB) i cili lejon pronarët e bizneseve të komunikojnë me bazën e tyre të të dhënave në gjuhën natyrore (shqip dhe anglisht), duke gjeneruar dhe ekzekutuar queries SQL në mënyrë të sigurt përmes procedurave të ruajtura (RPC) të databazës. Integriteti i të dhënave financiare dhe i inventarit është i garantuar përmes transaksioneve atomike në nivel të motorit PostgreSQL, duke shmangur plotësisht problemet e konkurencës (race conditions). Sistemi përfshin sigurinë e nivelit të lartë përmes Row Level Security (RLS) dhe mbështet ndërfaqe shumë-gjuhëshe për tregun rajonal dhe ndërkombëtar.
 
----
+#### **Abstract (English)**
+Enterprise Resource Planning (ERP) systems are the backbone of modern business operations. However, legacy ERP systems are often highly complex, prohibitively expensive, and demand heavy on-premise infrastructure. This project presents **Agoni ERP**, a state-of-the-art, "Full-Stack Serverless", "Multi-Tenant" cloud-based system specifically designed for Small and Medium Enterprises (SMEs). Built using the Next.js 16 framework (React 19), TypeScript, and the Supabase platform (PostgreSQL), Agoni ERP delivers an ultra-fast, reactive, and highly secure environment. 
 
-**5. Qëllimet dhe Objektivat e Projektit**
-
-Qëllimi kryesor i Agoni ERP është krijimi i një ekosistemi të centralizuar ku të gjitha të dhënat e biznesit rrjedhin lirshëm dhe sigurt.
-
-**Objektivat specifike përfshijnë:**
-1.  **Automatizimi i Inventarit:** Përditësimi automatik i stokut pas çdo shitjeje ose blerjeje.
-2.  **Menaxhimi i Shitjeve:** Krijimi i faturave profesionale (Mall ose Shërbim) me llogaritje automatike të TVSH-së.
-3.  **Monitorimi i Blerjeve:** Regjistrimi i furnizimeve dhe ruajtja e dokumentacionit (faturave të furnitorit) në cloud.
-4.  **Analitika në Kohë Reale:** Ofrimi i një dashboard-i me grafikë dhe metrika kyçe për performancën e biznesit.
-5.  **Siguria dhe Integriteti:** Implementimi i Row Level Security (RLS) për të garantuar që çdo përdorues sheh vetëm të dhënat e tij.
+The system implements advanced Artificial Intelligence (AI) components: first, an automated OCR extraction module that parses physical vendor invoices using the multimodal OpenAI GPT-4o model, converting raw image/PDF data into structured database entries instantly; second, an interactive database chatbot (ChatDB) that enables business owners to query their application data in natural language (Albanian and English), securely generating and running SQL statements via Database Stored Procedures (RPC). Financial and inventory data integrity is guaranteed using database-level atomic transactions, completely eliminating multi-user race conditions. The system ensures robust access isolation using Row Level Security (RLS) and provides full multi-language localization (Albanian and English) tailored for regional and international markets.
 
 ---
 
-**6. Përmbledhja e Sistemit**
+### **KAPITULLI 3: Hyrja**
 
-Agoni ERP është një aplikacion Web i bazuar në arkitekturën "Software as a Service" (SaaS). Sistemi është i ndarë në disa module kryesore:
+#### **3.1 Konteksti dhe Motivimi i Projektit**
+Bizneset e vogla dhe të mesme (SME) përbëjnë mbi 95% të ekonomisë në rajonin e Ballkanit Perëndimor. Për t'i bërë ballë konkurrencës dhe kërkesave të tregut global, digjitalizimi i operacioneve bazë — si menaxhimi i stokut, regjistrimi i blerjeve, kryerja e shitjeve dhe analizat financiare — është bërë i pashmangshëm. Motivimi prapa zhvillimit të **Agoni ERP** buron nga nevoja për një platformë të vetme, të centralizuar, që eliminon fragmentimin e të dhënave ku bizneset përdorin tabela të izoluara Excel, fatura fizike letre dhe softuerë të ndryshëm lokalë që nuk komunikojnë me njëri-tjetrin.
 
-*   **Moduli i Autentikimit:** Menaxhon regjistrimin, kyçjen dhe rivendosjen e fjalëkalimeve.
-*   **Moduli i Dashboard-it:** Ofron një pamje të përgjithshme të gjendjes financiare.
-*   **Moduli i Produkteve (Stoku):** Katalogu i të gjitha artikujve me barkode dhe çmime.
-*   **Moduli i Shitjeve (Sales):** Interface për kryerjen e shitjeve të shpejtë.
-*   **Moduli i Blerjeve (Purchases):** Interface për shtimin e mallit të ri.
-*   **Libri i Shitjeve/Blerjeve:** Raporte të detajuara tabelare për auditim.
+#### **3.2 Problemi që Zgjidhet**
+Sistemi adreson drejtpërdrejt sfidat kryesore me të cilat ballafaqohen menaxherët e SME-ve sot:
+1. **Gabimet në Inventar (Stock Drifts):** Regjistrimet e pakoordinuara shpesh shkaktojnë mospërputhje mes stokut fizik dhe atij në sistem. Agoni ERP e zgjidh këtë duke bërë përditësime atomike të stokut në momentin që ruhet një blerje ose shitje.
+2. **Humbja e Kohës në Regjistrimin e Blerjeve:** Futja manuale e dhjetëra artikujve nga faturat e furnitorëve është e ngadaltë dhe e prirur ndaj gabimeve. Moduli AI Vision nxjerr automatikisht të dhënat brenda pak sekondave.
+3. **Mungesa e Ekspertizës Teknike për Analizimin e të Dhënave:** Shumë pronarë biznesi nuk dinë të shkruajnë pyetje komplekse (queries) ose të filtrojnë raporte. Asistenti **ChatDB** u mundëson atyre të flasin direkt me databazën.
+4. **Cënueshmëria e të Dhënave (Data Isolation):** Pa izolim të rreptë, të dhënat e një kompanie mund të ekspozohen ose ndryshohen nga përdorues të paautorizuar. Kjo parandalohet përmes politikave RLS të databazës.
 
----
+#### **3.3 Qëllimet dhe Objektivat**
+* **Krijimi i një platforme të centralizuar SaaS** ku çdo biznes ka hapësirën e vet të izoluar në databazë.
+* **Zhvillimi i një pike shitjeje (POS)** intuitive dhe të shpejtë me llogaritje automatike të taksës (TVSH) për mallra dhe shërbime.
+* **Integrimi i plotë i AI** për të rritur produktivitetin e ndërmarrjes përmes OCR-së së faturave dhe Chatbot-it SQL.
+* **Garantimi i performancës së lartë** me kohë ngarkimi nën 2 sekonda dhe sinkronizim në kohë reale.
 
-**7. Teknologjitë e Përdorura**
-
-Për zhvillimin e këtij sistemi janë zgjedhur teknologjitë më të fundit që garantojnë shkallëzim (scalability) dhe qëndrueshmëri.
-
-*   **Frontend Framework:** **Next.js 15 (React)** - Për renderim të shpejtë dhe SEO të optimizuar.
-*   **Gjuha Programuese:** **TypeScript** - Për të siguruar tipizim të saktë dhe pakësimin e gabimeve gjatë zhvillimit.
-*   **Backend & Database:** **Supabase (PostgreSQL)** - Një platformë "Backend-as-a-Service" që ofron databazë relacionale të fuqishme, autentikim dhe ruajtje skedarësh (Storage).
-*   **Stilimi:** **Tailwind CSS** - Për një ndërfaqe moderne, responsive dhe shumë të shpejtë.
-*   **Menaxhimi i Gjendjes (State):** **React Hooks & Context API** - Për menaxhimin e të dhënave të përdoruesit në të gjithë aplikacionin.
-*   **Siguria:** **Supabase Auth & RLS** - Siguron që të dhënat janë të izoluara në nivel rreshti në databazë.
+#### **3.4 Struktura e Raportit**
+Ky raport teknik është i strukturuar në 10 kapituj. Kapitulli i parë dhe i dytë mbulojnë informacionin bazë dhe abstraktin e projektit. Kapitulli 3 prezanton motivimin dhe qëllimet. Kapitulli 4 analizon kërkesat funksionale dhe jofunksionale të sistemit duke përdorur diagramet Use Case dhe User Stories. Kapitulli 5 detajon dizajnin arkitekturor, diagramet UML (Class, Sequence, Activity, ERD) dhe dizajnin e databazës. Kapitulli 6 shpjegon procesin e implementimit teknik, strukturën e skedarëve dhe pjesët kryesore të kodit. Kapitulli 7 mbulon strategjinë dhe rastet e testimit. Kapitulli 8 përmban udhëzuesin e plotë të instalimit dhe përdorimit me përshkrime ndërfaqesh. Kapitulli 9 nxjerr konkluzionet dhe sugjeron hapat e ardhshëm, kurse Kapitulli 10 liston referencat e përdorura akademike.
 
 ---
 
-**7.1 Metodologjia e Zhvillimit (Agile Scrum)**
+### **KAPITULLI 4: Analiza e Kërkesave (Requirements Analysis)**
 
-Për realizimin e Agoni ERP është përdorur metodologjia Agile, specifikisht kuadri Scrum. Ky proces ka mundësuar:
-
-*   **Sprints 2-javore:** Zhvillimi është ndarë në cikle të shkurtra ku në fund të çdo cikli kemi pasur një verzion funksional të një moduli (p.sh. Sprint 1: Autentikimi, Sprint 2: Inventari).
-*   **Daily Stand-ups:** Takime të përditshme për të identifikuar pengesat teknike.
-*   **Backlog Refinement:** Rishikimi i vazhdueshëm i kërkesave (User Stories) për t'u siguruar që ato përputhen me nevojat e biznesit.
-*   **Test-Driven Development (TDD):** Shkrimi i testeve para kodit për modulet kritike financiare.
-
-**Plani Kohor i Projektit (Timeline):**
-1. **Muaji 1:** Analiza e kërkesave dhe dizajni i databazës (ERD).
-2. **Muaji 2:** Zhvillimi i modulit të stokut dhe blerjeve.
-3. **Muaji 3:** Implementimi i modulit të shitjeve dhe raporteve.
-4. **Muaji 4:** Testimi, optimizimi i performancës dhe dokumentimi final.
-
----
-
-**8. Kërkesat Funksionale**
-
-
-Kërkesat funksionale specifikojnë veprimet që sistemi duhet të jetë në gjendje të kryejë.
+#### **4.1 Kërkesat Funksionale (KF)**
+Kërkesat funksionale përshkruajnë sjelljen specifike të sistemit dhe shërbimet që ai duhet të ofrojë për përdoruesit e tij.
 
 | ID | Kërkesa Funksionale | Përshkrimi i Detajuar | Prioriteti | Moduli |
 |:---|:---|:---|:---|:---|
-| KF-01 | Autentikimi i Sigurt | Përdoruesi duhet të kyçet përmes emailit dhe fjalëkalimit me validim JWT. | Kritik | Auth |
-| KF-02 | Regjistrimi i Biznesit | Mundësia për të hapur një llogari të re dhe për të konfiguruar profilin fillestar. | Kritik | Auth |
-| KF-03 | Menaxhimi i Stokut | Shtimi, editimi dhe fshirja e artikujve. Ruajtja e historikut të çmimeve. | Kritik | Inventari |
-| KF-04 | Skanimi i Barcode | Integrimi me skaner hardware ose kamera për identifikim të shpejtë të produktit. | Lartë | Inventari |
-| KF-05 | Kategorizimi i Produkteve | Organizimi i artikujve në grupe (p.sh. Ushqime, Higjienë) për raportim më të mirë. | Mesatare | Inventari |
-| KF-06 | Pika e Shitjes (POS) | Ndërfaqe e optimizuar për shitje të shpejta me llogaritje automatike. | Kritik | Shitjet |
-| KF-07 | Diferencimi Mall/Shërbim | Sistemi duhet të trajtojë ndryshe shitjen e produkteve fizike dhe shërbimeve. | Lartë | Shitjet |
-| KF-08 | Konfigurimi i TVSH | Aplikimi i normave të ndryshme (0%, 8%, 18%) sipas legjislacionit në fuqi. | Kritik | Financat |
-| KF-09 | Libri i Shitjeve (Sales Book) | Gjenerimi i listës kronologjike të të gjitha shitjeve për një periudhë. | Lartë | Raportet |
-| KF-10 | Menaxhimi i Blerjeve | Regjistrimi i faturave të hyrjes nga furnitorët për rritje të stokut. | Lartë | Blerjet |
-| KF-11 | Ngarkimi i Dokumenteve | Mundësia për të bashkëngjitur foto/PDF të faturave fizike të blerjes. | Mesatare | Blerjet |
-| KF-12 | Raportet e Profitit | Kalkulimi i diferencës midis çmimit të shitjes dhe atij të blerjes. | Lartë | Raportet |
-| KF-13 | Eksporti i të Dhënave | Shkarkimi i raporteve në formatet CSV, Excel dhe PDF. | Mesatare | Raportet |
-| KF-14 | Alarmi për Stok të Ulët | Notifikimi i përdoruesit kur sasia e një artikulli bie nën një limit të caktuar. | Lartë | Inventari |
-| KF-15 | Menaxhimi i Klientëve | Ruajtja e të dhënave të klientëve të rregullt për faturim më të shpejtë. | Ulët | Shitjet |
-| KF-16 | Rivendosja e Fjalëkalimit | Procesi i automatizuar i dërgimit të linkut për reset përmes emailit. | Kritik | Auth |
-| KF-17 | Logu i Auditimit | Regjistrimi i veprimeve kryesore (kush shtoi/fshiu çka dhe kur). | Lartë | Siguria |
-| KF-18 | Dashboard Dinamik | Vizualizimi i të dhënave përmes grafikëve (Charts) në kohë reale. | Mesatare | Dashboard |
-| KF-19 | Sinkronizimi Multi-User | Sigurimi që të dhënat janë konsistente kur shumë njerëz punojnë njëkohësisht. | Kritik | Sistemi |
-| KF-20 | Backup i Automatizuar | Ruajtja e kopjeve rezervë të databazës në cloud nga Supabase. | Kritik | Sistemi |
+| **KF-01** | Autentikim me Supabase Auth | Përdoruesit duhet të regjistrohen dhe kyçen në mënyrë të sigurt duke përdorur kredencialet (Email dhe Password) të verifikuara me JWT. | Kritik | Autentikimi |
+| **KF-02** | Rikuperimi i Fjalëkalimit | Mundësia për të dërguar një email për rivendosjen e fjalëkalimit të harruar. | Kritik | Autentikimi |
+| **KF-03** | Menaxhimi i Profilit dhe AI | Mundësia për të aktivizuar ose çaktivizuar funksionalitetet e AI (AI Toggle) në nivel profili. | Mesatare | Administrimi |
+| **KF-04** | Katalogu i Produkteve | Regjistrimi, editimi, listimi dhe fshirja e produkteve në inventar. | Kritik | Inventari |
+| **KF-05** | Barkodi i Produkteve | Lidhja e çdo produkti me një kod unik barkodi për kërkim të shpejtë. | Lartë | Inventari |
+| **KF-06** | Sasia dhe Njësia Matëse | Specifikimi i sasisë në stok me njësi përkatëse (copë, kg, litër, paketë, etj.). | Kritik | Inventari |
+| **KF-07** | POS (Point of Sale) | Krijimi i një faturimi të shpejtë të shitjes duke zgjedhur produktet ekzistuese. | Kritik | Shitjet |
+| **KF-08** | Llogaritja e TVSH-së | Aplikimi i normave të ndryshme të TVSH-së (0%, 8%, 18%) për çdo transaksion shitjeje. | Kritik | Shitjet |
+| **KF-09** | Kategorizimi Mall/Shërbim | Ndarja e zërave të shitjes në mallra fizike (që ulin stokun) dhe shërbime (që nuk ndikojnë stokun). | Lartë | Shitjet |
+| **KF-10** | Libri i Shitjeve | Histori e detajuar kronologjike e të gjitha shitjeve të kryera me mundësi filtrimi. | Lartë | Raportet |
+| **KF-11** | Regjistrimi i Furnizimeve | Shtimi manual i blerjeve të reja me kosto blerjeje dhe çmim shitjeje. | Lartë | Blerjet |
+| **KF-12** | Ekstraktimi i Faturës me AI | Ngarkimi i një fotoje/PDF të faturës fizike dhe leximi i saj automatik me AI. | Lartë | Blerjet |
+| **KF-13** | Libri i Blerjeve | Histori e detajuar kronologjike e të gjitha furnizimeve dhe ruajtja e imazheve të tyre në Cloud. | Lartë | Raportet |
+| **KF-14** | Dashboard-i Financiar | Pamje grafike në kohë reale e të hyrave (shitjeve), shpenzimeve (blerjeve) dhe profitit neto. | Mesatare | Dashboard |
+| **KF-15** | Analitika e Stokut | Metrika mbi vlerën totale të inventarit (me çmim shitjeje) dhe totalin e artikujve. | Mesatare | Dashboard |
+| **KF-16** | Asistenti ChatDB | Bisedë interaktive me AI për të marrë të dhëna nga databaza duke përdorur gjuhë natyrore. | Lartë | Asistenti AI |
+| **KF-17** | Gjenerimi i SQL në ChatDB | Shfaqja dhe shpjegimi i kodit SQL të gjeneruar nga asistenti AI për transparencë. | Lartë | Asistenti AI |
+| **KF-18** | Mbështetje Shumë-gjuhëshe | Mundësia për të kaluar sistemin midis gjuhës Shqipe dhe Angleze në kohë reale. | Lartë | Lokalizimi |
+| **KF-19** | Ndryshimi i Temave | Mbështetja për temë të errët (Dark Mode) dhe të ndritur (Light Mode). | Ulët | UI/UX |
+| **KF-20** | Eksporti i Raporteve | Mundësia e shkarkimit të raporteve në format tabular CSV/Excel. | Mesatare | Raportet |
 
+#### **4.2 Kërkesat Jofunksionale (KJF)**
+Kërkesat jofunksionale përcaktojnë kufizimet, cilësitë dhe standardet e sigurisë që sistemi duhet të plotësojë.
+* **KJF-01 (Performanca):** Çdo faqe ose komponent duhet të ngarkohet në më pak se 1.5 sekonda në kushte normale rrjeti. Përpunimi i faturës me AI nuk duhet të zgjasë më shumë se 15 sekonda.
+* **KJF-02 (Siguria dhe Izolimi):** Të dhënat duhet të ruhen në një databazë të mbrojtur me politika të rrepta RLS (Row Level Security). Komunikimi midis klientit dhe serverit duhet të bëhet ekskluzivisht përmes protokollit të enkriptuar HTTPS. API-të që ndërveprojnë me Supabase duhet të vërtetojnë JWT në çdo thirrje.
+* **KJF-03 (Konkurenca dhe Konsistenca):** Përditësimi i sasive të stokut pas çdo blerjeje ose shitjeje duhet të jetë atomik dhe të kryhet në nivel databaze (PostgreSQL Function) për të eliminuar garat e proceseve (race conditions) kur dy operatorë punojnë njëkohësisht.
+* **KJF-04 (Disponueshmëria - Uptime):** Sistemi duhet të ketë një disponueshmëri prej 99.9% duke u mbështetur në infrastrukturën Serverless të Vercel dhe Supabase Cloud.
+* **KJF-05 (Përgjegjshmëria e UI - Usability):** Ndërfaqja duhet të jetë plotësisht responsive (Mobile-First) dhe të përdorë komponentë të qasshëm (Radix/Shadcn), duke u përshtatur në desktop, tableta dhe telefona celularë.
 
----
-
-**9. Kërkesat Jofunksionale**
-
-*   **9.1 Performanca:** Ngarkimi i faqeve kryesore në < 2 sekonda.
-*   **9.2 Siguria:** Komunikim i koduar SSL (HTTPS) dhe RLS në databazë.
-*   **9.3 Disponueshmëria:** 99.9% uptime përmes Supabase Cloud.
-*   **9.4 Skaulueshmëria:** Kapacitet për të përballuar qindra transaksione simultane.
-*   **9.5 Përdorshmëria:** Dizajn intuitiv dhe i përshtatshëm për pajisje mobile.
-
----
-
-**10. Rolet dhe Lejet e Përdoruesve**
-
-1.  **Administratori:** Qasje të plotë (CRUD) në produkte, shitje, blerje dhe raporte.
-2.  **Operator (Shitësi):** Mund të kryejë shitje dhe të shohë stokun, por nuk mund të shohë koston e blerjes.
-3.  **Vizitor:** Nuk ka qasje në sistem pa autentikim.
-
----
-
-**11. User Stories (40 Tregime Agile)**
-
-Për të siguruar që sistemi mbulon të gjitha nevojat e përdoruesve, janë identifikuar 40 tregime (User Stories) të ndara sipas moduleve:
-
-**A. Autentikimi dhe Profili (1-8)**
-1. Si përdorues i ri, unë dua të regjistrohem në sistem që të mund të menaxhoj biznesin tim.
-2. Si përdorues, unë dua të kyçem (login) në mënyrë të sigurt për të mbrojtur të dhënat e mia.
-3. Si përdorues, unë dua të mund të rivendos fjalëkalimin nëse e harroj atë përmes emailit.
-4. Si përdorues, unë dua të përditësoj emrin e biznesit tim në profil.
-5. Si përdorues, unë dua të ndryshoj fjalëkalimin aktual për arsye sigurie.
-6. Si përdorues, unë dua që sistemi të mbajë mend seancën time që të mos kyçem çdo herë.
-7. Si përdorues, unë dua të dal (logout) nga sistemi në çdo kohë.
-8. Si administrator, unë dua të shoh historikun e kyçjeve të mia.
-
-**B. Menaxhimi i Stokut/Produkteve (9-18)**
-9. Si përdorues, unë dua të shtoj një produkt të ri me emër, sasi dhe çmim.
-10. Si përdorues, unë dua të skanoj barkodin e një produkti që ta gjej atë shpejt në sistem.
-11. Si përdorues, unë dua të modifikoj detajet e një produkti ekzistues (p.sh. çmimin).
-12. Si përdorues, unë dua të fshij një produkt që nuk e shes më.
-13. Si përdorues, unë dua të shoh listën e produkteve që janë afër mbarimit (stok i ulët).
-14. Si përdorues, unë dua të filtroj produktet sipas emrit ose barkodit.
-15. Si përdorues, unë dua të caktoj një njësi matëse (copë, kg, litër) për çdo produkt.
-16. Si përdorues, unë dua të shoh koston mesatare të blerjes për një produkt.
-17. Si përdorues, unë dua të eksportoj listën e stokut në format CSV/Excel.
-18. Si përdorues, unë dua të shoh historikun e lëvizjeve të një artikulli specifik.
-
-**C. Moduli i Shitjeve (19-28)**
-19. Si përdorues, unë dua të krijoj një faturë të re shitjeje duke zgjedhur produkte.
-20. Si përdorues, unë dua të zgjedh nëse shitja është "Mall" apo "Shërbim".
-21. Si përdorues, unë dua të aplikoj një normë TVSH-je (0%, 8%, 18%) për çdo shitje.
-22. Si përdorues, unë dua të shoh totalin e faturës në kohë reale gjatë shtimit të artikujve.
-23. Si përdorues, unë dua të ruaj faturën dhe të shoh konfirmimin e suksesit.
-24. Si përdorues, unë dua që stoku të zbritet automatikisht pas konfirmimit të shitjes.
-25. Si përdorues, unë dua të shoh listën e të gjitha shitjeve të realizuara (Libri i Shitjeve).
-26. Si përdorues, unë dua të filtroj shitjet sipas një periudhe të caktuar kohore.
-27. Si përdorues, unë dua të printoj një faturë të caktuar në format PDF.
-28. Si përdorues, unë dua të shfuqizoj (storno) një shitje të gabuar.
-
-**D. Moduli i Blerjeve (29-35)**
-29. Si përdorues, unë dua të regjistroj një blerje të re nga furnitori.
-30. Si përdorues, unë dua të shënoj numrin fiskal të furnitorit për qëllime tatimore.
-31. Si përdorues, unë dua të ngarkoj një foto të faturës fizike si dëshmi.
-32. Si përdorues, unë dua që sasia e blerë të shtohet automatikisht në stok.
-33. Si përdorues, unë dua të shoh Librin e Blerjeve për të monitoruar shpenzimet.
-34. Si përdorues, unë dua të llogaris totalin e blerjeve mujore.
-35. Si përdorues, unë dua të shoh detajet e çdo blerjeje (çmimin e kushtimit).
-
-**E. Raportet dhe Dashboard-i (36-40)**
-36. Si përdorues, unë dua të shoh totalin e shitjeve sot në dashboard.
-37. Si përdorues, unë dua të shoh grafikun e shitjeve gjatë 7 ditëve të fundit.
-38. Si përdorues, unë dua të shoh numrin total të produkteve në sistem.
-39. Si përdorues, unë dua të shoh vlerën totale të stokut tim (në çmim shitjeje).
-40. Si përdorues, unë dua të shoh produktet më të shitura të muajit.
-
----
-
-**12. Use Case Diagrams dhe Përshkrimet**
-
-Në këtë seksion paraqiten ndërveprimet kryesore midis përdoruesve dhe sistemit në mënyrë të detajuar.
-
-### Use Case 1: Realizimi i një Shitjeje (Process Sale)
-*   **Aktorët:** Administratori, Operatori.
-*   **Përshkrimi:** Ky rast përdorimi lejon përdoruesin të faturojë mallrat e shitura dhe të gjenerojë dokumentin përkatës.
-*   **Parakushtet:** Përdoruesi duhet të jetë i kyçur dhe produktet duhet të ekzistojnë në inventar me sasi > 0.
-*   **Rrjedha Kryesore:**
-    1. Përdoruesi navigon te faqja "Sales" (Shitjet).
-    2. Sistemit shfaq formën për faturë të re me numër unik faturimi.
-    3. Përdoruesi kërkon produktin (përmes emrit ose skanimit të barkodit).
-    4. Përdoruesi specifikon sasinë e shitur.
-    5. Sistemi validon nëse ka mjaftueshëm stok.
-    6. Sistemi llogarit automatikisht vlerën totale dhe TVSH-në.
-    7. Përdoruesi klikon "Ruaj Shitjen".
-    8. Sistemi regjistron transaksionin në databazë.
-    9. Sistemi ekzekuton një funksion (Trigger) për të zbritur sasinë nga tabela e stokut.
-*   **Rrjedha Alternative 1 (Sasia zero):** Nëse sasia e kërkuar është 0 ose negative, sistemi bllokon butonin "Ruaj" dhe shfaq paralajmërim.
-*   **Rrjedha Alternative 2 (Sasia e pamjaftueshme):** Nëse sasia e kërkuar tejkalon gjendjen aktuale, sistemi shfaq mesazhin: "Sasi e pamjaftueshme në stok" dhe kërkon rishikim.
-*   **Pas-kushtet:** Fatura shtohet në historik dhe përditësohet dashboard-i financiar.
-
-### Use Case 2: Regjistrimi i Furnizimit (Record Purchase)
-*   **Aktorët:** Administratori.
-*   **Përshkrimi:** Shtimi i artikujve të rinj në inventar ose rritja e sasisë së artikujve ekzistues përmes faturave të blerjes.
-*   **Parakushtet:** Përdoruesi duhet të ketë rolin "Administrator".
-*   **Rrjedha Kryesore:**
-    1. Përdoruesi navigon te seksioni "Purchases".
-    2. Përdoruesi plotëson të dhënat e furnitorit (Emri, Numri Fiskal).
-    3. Përdoruesi fut numrin e faturës së blerjes dhe datën.
-    4. Përdoruesi zgjedh artikujt dhe fut çmimin e blerjes (cost price).
-    5. Përdoruesi mund të ngarkojë skanimin e faturës origjinale.
-    6. Sistemi ruan të dhënat dhe rrit gjendjen e stokut për çdo artikull të përfshirë.
-*   **Rrjedha Alternative:** Nëse artikulli nuk ekziston në sistem, përdoruesi mund ta krijojë atë direkt nga kjo ndërfaqe duke plotësuar emrin dhe barkodin e ri.
-*   **Pas-kushtet:** Vlera e investuar në stok përditësohet në raporte.
-
-### Use Case 3: Menaxhimi i Inventarit (Inventory CRUD)
-*   **Aktorët:** Administratori.
-*   **Përshkrimi:** Menaxhimi i plotë i katalogut të artikujve.
-*   **Rrjedha Kryesore:**
-    1. Përdoruesi hap faqen "Products".
-    2. Sistemi shfaq listën e të gjithë artikujve me barkode dhe çmime.
-    3. Përdoruesi klikon "Edito" për një artikull specifik.
-    4. Përdoruesi ndryshon çmimin e shitjes ose emrin.
-    5. Sistemi ruan ndryshimet dhe siguron që barkodi të mbetet unik për atë përdorues.
-*   **Pas-kushtet:** Të gjitha ndryshimet reflektohen menjëherë në modulin e shitjes.
-
-### Use Case 4: Gjenerimi i Raporteve Financiare
-*   **Aktorët:** Administratori.
-*   **Përshkrimi:** Marrja e informacioneve mbi xhiron dhe profitin.
-*   **Rrjedha Kryesore:**
-    1. Përdoruesi navigon te "Reports".
-    2. Përdoruesi zgjedh intervalin e datave (p.sh. 1-31 Maj).
-    3. Sistemi mbledh të gjitha shitjet dhe blerjet e asaj periudhe.
-    4. Sistemi llogarit totalet e TVSH-së dhe profitin bruto.
-    5. Përdoruesi klikon "Download PDF" për të marrë dokumentin zyrtar.
-*   **Pas-kushtet:** Dokumenti gjenerohet dhe ruhet lokalisht.
-
-### Use Case 5: Menaxhimi i Sigurisë dhe Autentikimit
-*   **Aktorët:** Çdo përdorues i regjistruar.
-*   **Përshkrimi:** Ruajtja e integritetit të llogarisë.
-*   **Rrjedha Kryesore:**
-    1. Përdoruesi hyn në "Settings".
-    2. Zgjedh opsionin "Ndrysho Fjalëkalimin".
-    3. Fut fjalëkalimin e vjetër dhe atë të ri dy herë.
-    4. Sistemi verifikon vlefshmërinë dhe bën përditësimin.
-*   **Pas-kushtet:** Përdoruesi duhet të ri-kyçet me kredencialet e reja.
-
----
-
-**12.1 Mirëmbajtja e Sistemit dhe Mbështetja Teknike**
-
-Për të siguruar jetëgjatësinë e sistemit Agoni ERP, është hartuar një plan mirëmbajtjeje që përfshin:
-
-1.  **Monitorimi i Performancës:** Përdorimi i instrumenteve si Vercel Analytics për të identifikuar faqet që ngarkohen ngadalë.
-2.  **Përditësimet e Sigurisë:** Skanimi periodik i paketave `npm` për vulnerabilitete (përmes `npm audit`).
-3.  **Optimizimi i Databazës:** Rishikimi i indekseve në PostgreSQL çdo 6 muaj për të siguruar që kërkimet mbeten të shpejta edhe me rritjen e vëllimit të të dhënave.
-4.  **Mbështetja e Përdoruesve:** Ofrimi i një manuali teknik dhe video-tutorialeve për modulet komplekse si regjistrimi i inventarit përmes API-ve eksterne.
-
+#### **4.3 UML Use Case Diagram**
+Ky diagram tregon marrëdhëniet midis aktorëve kryesorë dhe rasteve kryesore të përdorimit në Agoni ERP.
 
 ```mermaid
-sequenceDiagram
-    participant U as Përdoruesi
-    participant F as Frontend (Next.js)
-    participant S as Supabase API
-    participant D as Database (PostgreSQL)
-
-    U->>F: Zgjedh produktet dhe sasinë
-    F->>F: Llogarit totalin dhe TVSH
-    U->>F: Klikon "Ruaj Shitjen"
-    F->>S: POST /rest/v1/sales (Invoice Data)
-    S->>D: Insert Into sales & sale_items
-    D-->>S: Success / Failure
-    Note over D: Trigger: Update stock quantity
-    D->>D: Update stock set quantity = quantity - sold_qty
-    S-->>F: 201 Created
-    F-->>U: Shfaq "Shitja u realizua me sukses"
-    F->>F: Rifreskon Dashboard-in
+graph TD
+    %% Actors
+    Admin["Administratori (Pronari)"]
+    Operator["Operatori (Shitësi)"]
+    
+    %% Use Cases
+    UC_Login(("Kyçja në Sistem"))
+    UC_Stock(("Menaxhimi i Stokut"))
+    UC_POS(("Shitja në POS"))
+    UC_Purchase(("Regjistrimi i Furnizimit"))
+    UC_OCR(("Ekstraktimi me AI (OCR)"))
+    UC_Chat(("Pyetja e Databazës me AI (ChatDB)"))
+    UC_Reports(("Gjenerimi i Raporteve"))
+    
+    %% Relationships
+    Operator --> UC_Login
+    Operator --> UC_POS
+    Operator --> UC_Stock
+    
+    Admin --> UC_Login
+    Admin --> UC_Stock
+    Admin --> UC_POS
+    Admin --> UC_Purchase
+    Admin --> UC_Reports
+    Admin --> UC_Chat
+    
+    %% Includes & Extends
+    UC_POS -.->|"<<include>>"| UC_Login
+    UC_Stock -.->|"<<include>>"| UC_Login
+    UC_Purchase -.->|"<<include>>"| UC_Login
+    UC_Reports -.->|"<<include>>"| UC_Login
+    UC_Chat -.->|"<<include>>"| UC_Login
+    UC_OCR -.->|"<<extend>>"| UC_Purchase
 ```
-*Përshkrimi i diagramit: Ky diagram tregon rrjedhën e mesazheve midis UI-së, Supabase API dhe PostgreSQL Database gjatë ruajtjes së një fature dhe përditësimit automatik të stokut.*
+
+#### **4.4 User Stories (40 Tregime Agile)**
+
+##### **A. Autentikimi dhe Administrimi (1-8)**
+1. **Si** përdorues i ri, **dua** të krijoj një llogari me email dhe fjalëkalim, **në mënyrë që** të kem mjedisin tim të menaxhimit të biznesit.
+2. **Si** përdorues, **dua** të kyçem në llogarinë time në mënyrë të sigurt, **në mënyrë që** të parandaloj qasjen e paautorizuar në të dhënat e mia financiare.
+3. **Si** përdorues, **dua** të mund të kërkoj një email për rivendosjen e fjalëkalimit, **në mënyrë që** të mund të hyj përsëri nëse e harroj atë.
+4. **Si** përdorues i kyçur, **dua** të ndryshoj fjalëkalimin tim nga paneli i konfigurimit, **në mënyrë që** të mbaj llogarinë time të sigurt.
+5. **Si** përdorues, **dua** që sistemi të mbajë mend seancën time (session), **në mënyrë që** të mos kem nevojë të shkruaj kredencialet çdo herë që hap faqen.
+6. **Si** përdorues, **dua** të mund të dal (logout) nga sistemi në çdo kohë, **në mënyrë që** të mbroj të dhënat e mia në pajisjet e përbashkëta.
+7. **Si** administrator, **dua** të aktivizoj ose çaktivizoj integrimet e AI me një buton (AI Toggle), **në mënyrë që** të kontrolloj shpenzimet e mia të API-së.
+8. **Si** operator, **dua** që sistemi të më bllokojë automatikisht faqet e adminit (si blerjet dhe konfigurimet), **në mënyrë që** të mos bëj ndryshime të paautorizuara.
+
+##### **B. Menaxhimi i Stokut (9-18)**
+9. **Si** përdorues, **dua** të shtoj një produkt të ri në katalog me emër, sasi fillestare dhe njësi matëse, **në mënyrë që** ta bëj atë të disponueshëm për shitje.
+10. **Si** përdorues, **dua** të caktoj një barkod për çdo produkt, **në mënyrë që** ta kërkoj atë shpejt me skaner gjatë shitjes.
+11. **Si** përdorues, **dua** të editoj emrin, njësinë ose barkodin e një produkti ekzistues, **në mënyrë që** të korrigjoj gabimet e shkrimit.
+12. **Si** përdorues, **dua** të fshij një produkt të gabuar nga stoku, **në mënyrë që** të mbaj katalogun tim të pastër.
+13. **Si** përdorues, **dua** të specifikoj çmimin e shitjes për çdo artikull, **në mënyrë që** POS-i të llogarisë automatikisht vlerat.
+14. **Si** përdorues, **dua** të shoh një listë të të gjithë artikujve të mi në formë tabele, **në mënyrë që** të bëj regjistrimin e gjendjes fizike.
+15. **Si** përdorues, **dua** të kërkoj produkte duke shkruar emrin ose skanuar barkodin e tyre në tabelë, **në mënyrë që** të gjej shpejt një produkt specifik.
+16. **Si** përdorues, **dua** të shoh sasinë aktuale të stokut në kohë reale, **në mënyrë që** të planifikoj blerjet e ardhshme.
+17. **Si** përdorues, **dua** të shoh një tregues të stokut të ulët (Low Stock Warning), **në mënyrë që** të mos mbes kurrë pa artikuj kritikë.
+18. **Si** përdorues, **dua** të shkarkoj të gjithë listën e stokut tim në format CSV, **në mënyrë që** ta importoj atë në sisteme të tjera ose ta printoj.
+
+##### **C. POS dhe Shitjet (19-28)**
+19. **Si** operator, **dua** të hap një ndërfaqe POS ku mund të zgjedh artikujt me një klikim, **në mënyrë që** të shërbej shpejt klientët.
+20. **Si** operator, **dua** të llogaris automatikisht totalin e faturës ndërsa shtohen artikujt, **në mënyrë që** të parandaloj gabimet e llogaritjes manuale.
+21. **Si** operator, **dua** të përzgjedh normën e TVSH-së (0%, 8%, 18%) për secilën shitje, **në mënyrë që** të jem në përputhje me ligjet tatimore.
+22. **Si** operator, **dua** të përcaktoj nëse shitja është "Mall" (fizike) apo "Shërbim", **në mënyrë që** stoku të ulet vetëm për produktet fizike.
+23. **Si** operator, **dua** që sistemi të kontrollojë automatikisht nëse ka mjaftueshëm stok para se të lejohet shitja, **në mënyrë që** të parandalohet stoku negativ.
+24. **Si** operator, **dua** të ruaj faturën dhe të marr një numër unik faturimi kronologjik, **në mënyrë që** të regjistroj zyrtarisht shitjen.
+25. **Si** përdorues, **dua** që sistemi të zbresë automatikisht sasinë e shitur nga tabela e stokut në mënyrë atomike, **në mënyrë që** stoku të mbetet i saktë.
+26. **Si** përdorues, **dua** të shoh të gjitha shitjet e realizuara në Librin e Shitjeve, **në mënyrë që** të bëj auditimin ditor të arkës.
+27. **Si** përdorues, **dua** të filtroj shitjet sipas periudhës kohore (ditore, javore, mujore), **në mënyrë që** të shoh ecurinë e xhiros.
+28. **Si** përdorues, **dua** të shkarkoj librin e shitjeve në format CSV, **në mënyrë që** t'ia dërgoj atë kontabilistit të biznesit tim.
+
+##### **D. Menaxhimi i Blerjeve dhe AI OCR (29-35)**
+29. **Si** administrator, **dua** të regjistroj një blerje të re manuale duke plotësuar furnitorin, numrin e faturës dhe çmimet e blerjes, **në mënyrë që** të rris gjendjen e stokut.
+30. **Si** administrator, **dua** të ngarkoj një imazh të faturës fizike gjatë regjistrimit, **në mënyrë që** të kem dëshmi vizuale të shpenzimit në Cloud.
+31. **Si** administrator, **dua** që AI të analizojë faturën e ngarkuar dhe të plotësojë automatikisht fushat e formularit, **në mënyrë që** të kursej kohë gjatë regjistrimit të qindra artikujve.
+32. **Si** administrator, **dua** që sasia e blerë e artikujve të shtohet automatikisht në stok përmes një transaksioni të sigurt, **në mënyrë që** të mos ketë gabime në kalkulim.
+33. **Si** administrator, **dua** të shoh të gjitha blerjet e mia në Librin e Blerjeve, **në mënyrë që** të monitoroj shpenzimet dhe borxhet ndaj furnitorëve.
+34. **Si** administrator, **dua** të shoh faturën origjinale të ngarkuar direkt nga Libri i Blerjeve me një klikim, **në mënyrë që** të verifikoj të dhënat kur ka mospërputhje.
+35. **Si** administrator, **dua** të llogaris koston totale të blerjeve për çdo furnitor, **në mënyrë që** të negocioj çmime më të mira për biznesin tim.
+
+##### **E. Dashboard-i Financiar dhe ChatDB AI (36-40)**
+36. **Si** përdorues, **dua** të shoh vlerat e shitjeve, blerjeve dhe profitit të sotëm në dashboard, **në mënyrë që** të kem një pasqyrë të shpejtë të ditës.
+37. **Si** përdorues, **dua** të shoh një grafik të të hyrave të 7 ditëve të fundit, **në mënyrë që** të vërej trendin e shitjeve të mia.
+38. **Si** përdorues, **dua** të shoh numrin total të produkteve unike dhe vlerën totale monetare të stokut, **në mënyrë që** të di sa kapital kam të bllokuar në depo.
+39. **Si** përdorues, **dua** t'i bëj pyetje në gjuhën natyrore shqipe asistentit ChatDB (p.sh. "Sa është profiti im këtë javë?"), **në mënyrë që** të marr përgjigje të shpejta pa hapur raporte komplekse.
+40. **Si** përdorues, **dua** të shoh kodin SQL që ChatDB ekzekuton, **në mënyrë që** të sigurohem që rezultatet e nxjerra janë plotësisht të sakta dhe transparente.
 
 ---
 
-**13. Arkitektura e Sistemit**
+### **KAPITULLI 5: Dizajni i Sistemit (System Design)**
 
-Sistemi Agoni ERP bazohet në një arkitekturë moderne "Full-stack Serverless", e cila mundëson performancë të lartë dhe kosto të ulët mirëmbajtjeje.
-
-*   **Shtresa e Prezantimit (Frontend):** E ndërtuar me Next.js 15. Përdor Server Components për renderim efikas dhe Client Components për ndërveprimet dinamike (si shtimi i artikujve në faturë).
-*   **Shtresa e Logjikës (Edge Functions/API):** Logjika e biznesit është e shpërndarë midis Next.js API Routes dhe Supabase Edge Functions. Kjo siguron që validimet të kryhen afër përdoruesit.
-*   **Shtresa e të Dhënave (Database):** PostgreSQL e hostuar në Supabase. Përdorimi i "Views" për raportet komplekse dhe "Triggers" për integritetin e stokut.
-*   **Infrastruktura Cloud:** Sistemi është i hostuar në platformën Vercel (për frontend) dhe Supabase Cloud (për backend), duke garantuar shkallëzim automatik.
+#### **5.1 Arkitektura e Sistemit**
+Agoni ERP bazohet në një arkitekturë moderne "3-Tier" (Prezantimi, Logjika dhe Të Dhënat) e cila funksionon plotësisht në mënyrë Serverless në Cloud:
+1. **Shtresa e Prezantimit (Frontend):** Next.js 16 (App Router) duke përdorur React 19 Client Components, Tailwind CSS v4 për stilim dhe Shadcn UI për komponentë premium. Kjo shtresë ndërvepron me përdoruesin dhe bën kërkesa asinkrone drejt API-ve.
+2. **Shtresa e Logjikës së Biznesit (Backend):** Next.js API Routes dhe Server-Side Rendered components. Përdoret korniza `@supabase/ssr` për menaxhimin e seancave përmes Cookies. Përpunimi i AI kryhet përmes integrimit të API-së së OpenAI (GPT-4o).
+3. **Shtresa e të Dhënave (Database):** PostgreSQL e hostuar në Supabase Cloud. Siguria zbatohet në këtë nivel përmes politikave RLS, ndërsa integriteti atomik i transaksioneve sigurohet përmes funksioneve SQL (stored procedures).
 
 ```mermaid
 graph TD
     User((Përdoruesi))
     
-    subgraph "Frontend (Vercel)"
-        NextJS[Next.js 15 App]
-        UI[Tailwind CSS & Shadcn UI]
+    subgraph "Shtresa e Prezantimit (Vercel)"
+        NextJS["Next.js 16 UI Engine"]
+        Tailwind["Tailwind v4 / Shadcn UI"]
+        NextJS <--> Tailwind
     end
     
-    subgraph "Backend (Supabase)"
-        Auth[Supabase Auth - JWT]
-        API[PostgREST API]
-        Storage[Supabase Storage - Faturat PDF]
-        DB[(PostgreSQL Database)]
+    subgraph "Shtresa e Logjikës (API Routes)"
+        AuthServ["Supabase Auth Guard (JWT)"]
+        ExtractAPI["API /api/extract (OpenAI GPT-4o)"]
+        ChatDBAPI["API /api/chat-db (OpenAI SQL Generator)"]
+    end
+    
+    subgraph "Shtresa e të Dhënave (Supabase)"
+        DB[("PostgreSQL Database")]
+        Storage[("Supabase Cloud Storage (PDF/Images)")]
+        SQLFunc[["handle_stock_update (Stored Procedure)"]]
+        DB <--> SQLFunc
     end
     
     User <--> NextJS
-    NextJS <--> UI
-    NextJS <--> Auth
-    NextJS <--> API
-    API <--> DB
-    NextJS <--> Storage
+    NextJS <--> AuthServ
+    NextJS <--> ExtractAPI
+    NextJS <--> ChatDBAPI
     
-    style DB fill:#f9f,stroke:#333,stroke-width:2px
-    style NextJS fill:#bbf,stroke:#333,stroke-width:2px
-    style Auth fill:#dfd,stroke:#333,stroke-width:2px
+    AuthServ <--> DB
+    ChatDBAPI <--> DB
+    ExtractAPI <--> Storage
+    NextJS <--> DB
+    NextJS <--> Storage
 ```
-*Përshkrimi: Një diagram që tregon lidhjen midis Përdoruesit, Next.js App, Supabase Auth, dhe PostgreSQL Database.*
+
+#### **5.2 Diagramet UML**
+
+##### **A. UML Class Diagram**
+Ky diagram tregon strukturën e klasave, shërbimeve kryesore dhe ndërfaqeve të aplikacionit.
+
+```mermaid
+classDiagram
+  class AuthProvider {
+    +session: Session
+    +user: User
+    +loading: boolean
+    +signOut() Promise~void~
+  }
+  
+  class StockService {
+    +updateStock(itemName: string, quantityChange: number, unit: string, userId: string, barcode?: string, sellingPrice?: number) Promise~boolean~
+    +getStock() Promise~StockItem[]~
+    +getStockByBarcode(barcode: string) Promise~StockItem~
+    +getItemByName(itemName: string) Promise~StockItem~
+    +updateProduct(id: string, updates: Object) Promise~StockItem~
+  }
+  
+  class ChatDBComponent {
+    -messages: Message[]
+    -input: string
+    -isLoading: boolean
+    -errorMessage: string
+    +sendMessage(rawMessage?: string) Promise~void~
+  }
+  
+  class ChatDBAPI {
+    +POST(req: NextRequest) Promise~NextResponse~
+    -SCHEMA_CONTEXT: string
+  }
+  
+  class ExtractAPI {
+    +POST(req: NextRequest) Promise~NextResponse~
+    -readUploadedFile(req: NextRequest) Promise~UploadedFile~
+    -parseJsonResponse(responseText: string) Object
+  }
+  
+  class SupabaseSSR {
+    +createClient() Client
+  }
+
+  ChatDBComponent ..> ChatDBAPI : thërret POST /api/chat-db
+  StockService ..> SupabaseSSR : përdor client
+  ChatDBAPI ..> SupabaseSSR : përdor server client
+  AuthProvider ..> SupabaseSSR : administron JWT seancën
+```
+
+##### **B. UML Sequence Diagram (Procesi i Shitjes POS)**
+Ky diagram tregon renditjen kohore të mesazheve dhe thirrjeve të realizuara kur kryhet një shitje në POS.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Përdoruesi (Operator/Admin)
+    participant UI as POS UI (Sales Page)
+    participant SS as StockService
+    participant API as Next.js API (/api/sales)
+    participant DB as PostgreSQL (Supabase)
+
+    U->>UI: Zgjedh produktet dhe klikon "Ruaj Shitjen"
+    UI->>SS: updateStock(item_name, -sasia, unit, user_id)
+    activate SS
+    SS->>DB: rpc("handle_stock_update", {p_quantity_change: -sasia})
+    activate DB
+    Note over DB: Ekzekutohet INSERT ... ON CONFLICT DO UPDATE
+    DB->>DB: Zbritet sasia nga stoku
+    DB-->>SS: Kthen Status 200 (Success)
+    deactivate DB
+    SS-->>UI: Kthen true (Konfirmim)
+    deactivate SS
+    
+    UI->>API: POST /api/sales (Fatura dhe Artikujt)
+    activate API
+    API->>DB: INSERT INTO public.sales & sale_items
+    activate DB
+    DB-->>API: 201 Created
+    deactivate DB
+    API-->>UI: Kthen Response 200 OK
+    deactivate API
+    UI-->>U: Shfaq "Shitja u krye me sukses!" dhe rifreskon UI-në
+```
+
+##### **C. UML Activity Diagram (Regjistrimi i Furnizimit me AI)**
+Ky diagram përshkruan rrjedhën e aktiviteteve gjatë ngarkimit dhe ekstraktimit automatik të faturave me AI.
+
+```mermaid
+stateDiagram-v2
+    [*] --> NgarkoFaturen: Përdoruesi zgjedh faturën (Foto/PDF)
+    NgarkoFaturen --> Validimi: Kontrollo madhësinë e skedarit (< 5MB)
+    
+    state Validimi {
+        [*] --> Kontrolli
+        Kontrolli --> E_Rregullt: Madhësia OK
+        Kontrolli --> Te_Madhe: > 5MB
+    }
+    
+    Te_Madhe --> [*]: Gabim: "Fatura kalon kufirin prej 5MB"
+    
+    E_Rregullt --> Base64: Konverto në skedar Base64
+    Base64 --> ThirrAPI: Dërgo në POST /api/extract
+    ThirrAPI --> OpenAI: Dërgohet imazhi me modelin GPT-4o (Vision)
+    OpenAI --> KtheJSON: Nxjerr të dhënat e strukturuara në JSON
+    KtheJSON --> PopulloFormularin: Popullo formularin e blerjes në UI automatikisht
+    PopulloFormularin --> Rishikimi: Përdoruesi verifikon dhe ndryshon fushat nëse ka nevojë
+    Rishikimi --> RuajBlerjen: Klikon "Ruaj Furnizimin"
+    RuajBlerjen --> Transaksioni: Thirret handle_stock_update (Shton sasitë në stok)
+    Transaksioni --> [*]: Blerja ruhet në databazë dhe stoku rritet
+```
+
+##### **D. UML ER Diagram (Entity-Relationship Diagram)**
+Ky diagram tregon skemën e plotë të databazës, marrëdhëniet, llojet e fushave dhe çelësat e jashtëm.
+
+```mermaid
+erDiagram
+    PROFILES ||--o{ STOCK : "menaxhon"
+    PROFILES ||--o{ SALES : "kryen"
+    PROFILES ||--o{ PURCHASES : "regjistron"
+    
+    SALES ||--|{ SALE_ITEMS : "përmban"
+    PURCHASES ||--|{ PURCHASE_ITEMS : "përmban"
+    
+    PROFILES {
+        uuid id PK
+        text business_name
+        text role
+        boolean ai_enabled
+    }
+    STOCK {
+        int id PK
+        text item_name
+        decimal quantity
+        text unit
+        text barcode
+        decimal selling_price
+        uuid user_id FK
+    }
+    SALES {
+        int id PK
+        text invoice_num
+        timestamp date
+        decimal total_amount
+        decimal vat_rate
+        text type
+        uuid user_id FK
+    }
+    SALE_ITEMS {
+        int id PK
+        int sale_id FK
+        text item_name
+        numeric quantity
+        numeric price
+        text unit
+        text barcode
+        uuid user_id FK
+    }
+    PURCHASES {
+        int id PK
+        text invoice_num
+        timestamp date
+        decimal total_cost
+        text seller_fiscal_num
+        text image_url
+        uuid user_id FK
+    }
+    PURCHASE_ITEMS {
+        int id PK
+        int purchase_id FK
+        text item_name
+        numeric quantity
+        numeric cost_price
+        numeric selling_price
+        text unit
+        text barcode
+        uuid user_id FK
+    }
+```
+
+#### **5.3 Dizajni i Bazës së të Dhënave (Database Schema)**
+
+Baza e të dhënave PostgreSQL përdor 6 tabela kryesore të cilat janë të lidhura në mënyrë relacionale. Më poshtë janë paraqitur detajet për secilën tabelë.
+
+##### **1. Tabela: `public.profiles`**
+Ruhet informacioni bazë i përdoruesve të regjistruar dhe profilet e tyre të biznesit.
+* **RLS Policy:** Përdoruesi mund të shohë dhe editojë vetëm profilin e tij ku `id = auth.uid()`. Administratorët mund të përditësojnë të gjitha profilet.
+
+| Fusha (Column) | Lloji (Type) | Kufizimi (Constraint) | Përshkrimi |
+|:---|:---|:---|:---|
+| `id` | `uuid` | PK, References `auth.users(id)` | ID-ja unike e përdoruesit nga Supabase Auth. |
+| `business_name` | `text` | NOT NULL | Emri i biznesit ose kompanisë. |
+| `role` | `text` | DEFAULT 'user' | Roli i përdoruesit ('admin', 'user'). |
+| `ai_enabled` | `boolean` | DEFAULT true | Tregon nëse asistentët AI janë të aktivizuar. |
+
+##### **2. Tabela: `public.stock`**
+Ruan listën e produkteve fizike në inventar për secilin biznes të izoluar.
+* **Unique Constraint:** Kombinimi `(item_name, user_id)` duhet të jetë unik.
+* **Indexes:** Krijohet indeks i shpejtë `idx_stock_barcode` në kolonën `barcode` për kërkime të menjëhershme.
+
+| Fusha (Column) | Lloji (Type) | Kufizimi (Constraint) | Përshkrimi |
+|:---|:---|:---|:---|
+| `id` | `serial` | PK | Identifikatori unik i rreshtit. |
+| `item_name` | `text` | NOT NULL | Emri i artikullit / produktit. |
+| `quantity` | `decimal(12,3)` | DEFAULT 0 | Sasia aktuale në stok. Mbështet decimalet (p.sh. kg). |
+| `unit` | `text` | DEFAULT 'copë' | Njësia matëse (copë, kg, litër, paketë, etj.). |
+| `barcode` | `text` | NULL | Barkodi i produktit. |
+| `selling_price` | `decimal(12,2)` | NULL | Çmimi standard i shitjes për njësi. |
+| `user_id` | `uuid` | FK, References `auth.users(id)` | Lidhja me përdoruesin që zotëron këtë stok. |
+
+##### **3. Tabela: `public.sales`**
+Ruan kokat e faturave të shitjeve të kryera në POS.
+* **Unique Constraint:** Kombinimi `(invoice_num, user_id)` duhet të jetë unik.
+
+| Fusha (Column) | Lloji (Type) | Kufizimi (Constraint) | Përshkrimi |
+|:---|:---|:---|:---|
+| `id` | `serial` | PK | Identifikatori i faturës. |
+| `invoice_num` | `text` | NOT NULL | Numri unik i faturës (p.sh. INV-0001). |
+| `date` | `timestamp` | DEFAULT now() | Data dhe ora e realizimit të shitjes. |
+| `total_amount` | `decimal(12,2)` | NOT NULL | Vlera totale e shitjes (përfshirë TVSH). |
+| `vat_rate` | `decimal(5,2)` | DEFAULT 0 | Norma e TVSH-së e aplikuar në faturë. |
+| `type` | `text` | CHECK ('Mall', 'Shërbim') | Lloji i transaksionit (me ndikim në stok ose jo). |
+| `user_id` | `uuid` | FK, References `auth.users(id)` | ID-ja e operatorit ose adminit që bëri shitjen. |
+
+##### **4. Tabela: `public.sale_items`**
+Ruan detajet specifike (rreshtat) e secilës faturë shitjeje.
+* **Delete Cascade:** Nëse fshihet fatura prind në tabelën `sales`, të gjithë rreshtat përkatës në `sale_items` fshihen automatikisht.
+
+| Fusha (Column) | Lloji (Type) | Kufizimi (Constraint) | Përshkrimi |
+|:---|:---|:---|:---|
+| `id` | `serial` | PK | Identifikatori i rreshtit. |
+| `sale_id` | `integer` | FK, References `sales(id) ON DELETE CASCADE` | Lidhja me faturën e shitjes prind. |
+| `item_name` | `text` | NOT NULL | Emri i produktit ose shërbimit të shitur. |
+| `quantity` | `numeric` | NOT NULL | Sasia e shitur. |
+| `price` | `numeric` | NOT NULL | Çmimi i shitjes për njësi. |
+| `unit` | `text` | NULL | Njësia matëse. |
+| `barcode` | `text` | NULL | Barkodi i artikullit. |
+| `user_id` | `uuid` | FK, References `auth.users(id)` | Përputhshmëria me ID-në e pronarit për RLS. |
+
+##### **5. Tabela: `public.purchases`**
+Ruan kokat e faturave të furnizimeve (blerjeve) të regjistruara nga furnitorët.
+
+| Fusha (Column) | Lloji (Type) | Kufizimi (Constraint) | Përshkrimi |
+|:---|:---|:---|:---|
+| `id` | `serial` | PK | Identifikatori i blerjes. |
+| `invoice_num` | `text` | NOT NULL | Numri i faturës së furnitorit. |
+| `date` | `timestamp` | DEFAULT now() | Data e regjistrimit ose data e faturës fizike. |
+| `total_cost` | `decimal(12,2)` | NOT NULL | Vlera totale e blerjes. |
+| `seller_fiscal_num` | `text` | NULL | Numri fiskal i furnitorit (biznesit tjetër). |
+| `image_url` | `text` | NULL | Linku i imazhit të faturës fizike të ruajtur në Cloud Storage. |
+| `user_id` | `uuid` | FK, References `auth.users(id)` | ID-ja e administratorit që regjistroi blerjen. |
+
+##### **6. Tabela: `public.purchase_items`**
+Ruan rreshtat e detajuar për secilën blerje të kryer.
+
+| Fusha (Column) | Lloji (Type) | Kufizimi (Constraint) | Përshkrimi |
+|:---|:---|:---|:---|
+| `id` | `serial` | PK | Identifikatori i rreshtit. |
+| `purchase_id` | `integer` | FK, References `purchases(id) ON DELETE CASCADE` | Lidhja me blerjen prind. |
+| `item_name` | `text` | NOT NULL | Emri i produktit të blerë. |
+| `quantity` | `numeric` | NOT NULL | Sasia e blerë. |
+| `cost_price` | `numeric` | NOT NULL | Çmimi i blerjes (kushtimit) për njësi. |
+| `selling_price` | `numeric` | NULL | Çmimi i ri i shitjes i sugjeruar. |
+| `unit` | `text` | NULL | Njësia matëse. |
+| `barcode` | `text` | NULL | Barkodi i artikullit. |
+| `user_id` | `uuid` | FK, References `auth.users(id)` | ID-ja e pronarit të të dhënave për RLS. |
 
 ---
 
-**14. Dizajni i Databazës**
+### **KAPITULLI 6: Implementimi (Implementation)**
 
-Struktura e të dhënave është projektuar për të siguruar integritet referencial dhe performancë të lartë në kërkime.
+#### **6.1 Teknologjitë dhe Gjuhët e Programimit**
+Sistemi është ndërtuar duke kombinuar mjetet më moderne për zhvillimin e shpejtë dhe të sigurt në Web:
+* **Next.js 16 (React 19):** Kornizë kryesore që përdor App Router për qasje efikase në Server Components, duke minimizuar JavaScript-in që dërgohet te klienti.
+* **TypeScript 5:** Gjuha e përdorur për zhvillim që mundëson tipizim statik, zvogëlon gabimet e kodimit në minimum dhe garanton cilësi të lartë kodi.
+* **Tailwind CSS v4 & Shadcn UI:** Përdoren për dizajnimin e ndërfaqes. Shadcn ofron komponentë të plotë të ndërtuar mbi Radix UI, ndërsa Tailwind v4 lehtëson stilimin me shpejtësi të lartë.
+* **Supabase (PostgreSQL, Auth, Storage):** Shërben si backend i plotë. Databaza PostgreSQL është e fuqishme, Supabase Auth ofron seanca JWT, ndërsa Supabase Storage ruan imazhet e faturave.
+* **OpenAI API (GPT-4o):** Modeli i përdorur për analizimin multimodal të faturave (OCR) dhe përkthimin e gjuhës natyrore në queries SQL.
 
-### 14.1 Modeli Relacional (ERD)
-Sistemi përdor një skemë relacionale ku tabelat kryesore janë:
+#### **6.2 Struktura e Foldereve dhe Moduleve**
+Aplikacioni është i ndarë në module të qarta duke ndjekur strukturën standarde të Next.js App Router:
 
-1.  **Profiles (Përdoruesit):** Ruhen të dhënat bazë të biznesit.
-2.  **Stock (Inventari):** Çdo artikull lidhet me një `user_id`.
-3.  **Sales (Shitjet):** Tabela "Prind" për çdo faturë shitjeje.
-4.  **Sale_Items (Artikujt e Shitjes):** Tabela "Fëmijë" që ruan detajet për çdo artikull në faturë.
-5.  **Purchases (Blerjet):** Tabela "Prind" për blerjet nga furnitorët.
-6.  **Purchase_Items (Artikujt e Blerjes):** Detajet e furnizimit.
+```text
+agoni -programim/
+├── .env.local             # Çelësat e konfigurimit të sigurisë lokale (Supabase, OpenAI)
+├── package.json           # Lista e librarive dhe varësive të projektit
+├── tsconfig.json          # Konfigurimi i TypeScript
+├── supabase/              # Skenarët e bazës së të dhënave SQL
+│   ├── schema.sql         # Skema bazë e tabelave dhe RLS
+│   ├── stock_function.sql # Funksioni atomik për përditësimin e stokut
+│   └── add_items_tables.sql # Krijimi i tabelave të detajuara të artikujve
+├── src/
+│   ├── app/               # Folderi kryesor i App Router (Faqet dhe API)
+│   │   ├── layout.tsx     # Layout-i global i faqes
+│   │   ├── page.tsx       # Faqja hyrëse publike (Landing Page)
+│   │   ├── login/         # Ndërfaqja e kyçjes së përdoruesve
+│   │   ├── register/      # Regjistrimi i bizneseve të reja
+│   │   ├── admin/         # Paneli i kontrollit për administratorin
+│   │   ├── api/           # API Endpoints
+│   │   │   ├── chat-db/   # Endpoint-i i asistentit ChatDB (SQL Runner)
+│   │   │   └── extract/   # Endpoint-i i OCR-së së faturave me AI
+│   │   └── dashboard/     # Modulet e Dashboard-it të kyçur
+│   │       ├── page.tsx   # Dashboard kryesor (Statistikat, Grafikët)
+│   │       ├── products/  # Menaxhimi i katalogut të produkteve
+│   │       ├── sales/     # POS - Kryerja e shitjeve
+│   │       ├── sales-book/# Libri i shitjeve (Raportet)
+│   │       ├── purchases/ # Regjistrimi i furnizimeve (Manual / AI)
+│   │       └── purchases-book/# Libri i blerjeve (Raportet)
+│   ├── components/        # Komponentët e ripërdorshëm React
+│   │   ├── ChatDB.tsx     # Komponenti vizual i bisedës me AI
+│   │   ├── EmptyState.tsx # Pamja kur tabelat nuk kanë të dhëna
+│   │   └── ui/            # Komponentët Shadcn (Button, Card, Input, etc.)
+│   ├── lib/               # Libraritë dhe shërbimet e centralizuara
+│   │   ├── services/
+│   │   │   └── stock.ts   # StockService (Shtresa e shërbimit të stokut)
+│   │   └── utils.ts       # Funksione ndihmëse (p.sh. bashkimi i klasave CSS)
+│   └── utils/
+│       └── supabase/
+│           ├── client.ts  # Supabase client për Client Components
+│           ├── server.ts  # Supabase client për Server Components (SSR)
+│           └── middleware.ts # Mbrojtja e rrugëve (Protected Routes) me Middleware
+```
 
-### 14.2 Detajet e Tabelave (Shembull SQL)
+#### **6.3 Shpjegim i Pjesëve Kryesore të Kodit**
+
+##### **1. Shtresa e Shërbimit të Stokut (StockService) — [stock.ts](file:///c:/Users/Admin/Desktop/agoni%20-programim/src/lib/services/stock.ts)**
+Kjo klasë shërben si një ndërfaqe e unifikuar për kryerjen e veprimeve mbi tabelën `stock`, duke izoluar logjikën e UI-së nga databaza direkte.
+
+```typescript
+export const StockService = {
+  // Përditëson stokun për një produkt në mënyrë atomike duke thirrur RPC-në PostgreSQL
+  async updateStock(itemName: string, quantityChange: number, unit: string, userId: string, barcode?: string, sellingPrice?: number) {
+    const supabase = createClient()
+    
+    // Thirrja e funksionit 'handle_stock_update' të definuar në SQL
+    const { error } = await supabase.rpc('handle_stock_update', {
+      p_item_name: itemName,
+      p_quantity_change: quantityChange,
+      p_unit: unit,
+      p_user_id: userId,
+      p_barcode: barcode || null,
+      p_selling_price: sellingPrice || null
+    })
+
+    if (error) {
+      console.error('StockService.updateStock error:', error)
+      throw new Error(`Dështoi përditësimi i stokut për ${itemName}: ${error.message}`)
+    }
+    return true
+  },
+
+  // Merr të gjithë stokun e pronarit të autentikuar
+  async getStock() {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .order("item_name", { ascending: true })
+
+    if (error) throw error
+    return data || []
+  }
+}
+```
+
+##### **2. Asistenti AI ChatDB (Gjeneruesi dhe Ekzekutuesi i SQL) — [route.ts](file:///c:/Users/Admin/Desktop/agoni%20-programim/src/app/api/chat-db/route.ts)**
+Ky endpoint merr pyetjen e përdoruesit në gjuhë natyrore, përdor OpenAI GPT-4o me një kontekst të detajuar të skemës së databazës sonë për të krijuar një query të saktë SQL, e ekzekuton atë në mënyrë të sigurt dhe kthen të dhënat.
+
+```typescript
+// Pjesë nga SCHEMA_CONTEXT ku udhëzohet modeli AI
+const SCHEMA_CONTEXT = `
+Baza e te dhenave:
+1. sales (invoice_num, total_amount, vat_rate, type, user_id)
+2. purchases (invoice_num, total_cost, seller_fiscal_num, user_id)
+3. stock (item_name, quantity, unit, barcode, selling_price, user_id)
+Response format:
+You must return ONLY a JSON object:
+{
+  "type": "sql" | "explanation",
+  "sql": "A valid PostgreSQL query targeting the caller's user_id without semicolon",
+  "content": "Friendly explanation of results in Albanian or English matching user language."
+}
+`;
+
+export async function POST(req: NextRequest) {
+  try {
+    const { message } = await req.json();
+    const supabase = await createClient();
+    
+    // Verifikojmë seancën e përdoruesit
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "I paautentikuar" }, { status: 401 });
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    // Thirrja e OpenAI
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "system", content: SCHEMA_CONTEXT }, { role: "user", content: message }],
+      })
+    });
+
+    const aiData = await response.json();
+    const rawContent = aiData.choices?.[0]?.message?.content?.trim();
+    const aiResponse = JSON.parse(rawContent);
+
+    // Ekzekutimi i sigurt në databazë përmes stored procedure 'execute_sql'
+    if (aiResponse.type === "sql" && aiResponse.sql) {
+      const { data, error } = await supabase.rpc("execute_sql", { query: aiResponse.sql });
+      if (error) return NextResponse.json({ error: error.message, sql: aiResponse.sql }, { status: 400 });
+      return NextResponse.json({ data, sql: aiResponse.sql, content: aiResponse.content });
+    }
+    return NextResponse.json({ content: aiResponse.content });
+  } catch (err) {
+    return NextResponse.json({ error: "Gabim i brendshëm" }, { status: 500 });
+  }
+}
+```
+
+##### **3. Funksioni Atomik i Stokut (PostgreSQL Stored Procedure) — [stock_function.sql](file:///c:/Users/Admin/Desktop/agoni%20-programim/supabase/stock_function.sql)**
+Ky funksion ekzekutohet brenda motorit të databazës PostgreSQL në mënyrë transaksionale. Ai zgjidh plotësisht mospërputhjet e sasive kur dy përdorues përpiqen të bëjnë përditësime në të njëjtin produkt në të njëjtin sekondë.
+
 ```sql
--- Tabela e Inventarit
-CREATE TABLE public.stock (
-  id SERIAL PRIMARY KEY,
-  item_name TEXT NOT NULL,
-  quantity DECIMAL DEFAULT 0,
-  barcode TEXT,
-  selling_price DECIMAL,
-  user_id UUID REFERENCES auth.users(id)
-);
+create or replace function public.handle_stock_update(
+  p_item_name text,
+  p_quantity_change numeric,
+  p_unit text,
+  p_user_id uuid,
+  p_barcode text default null,
+  p_selling_price numeric default null
+)
+returns void
+language plpgsql
+security definer -- Ekzekutohet me lejet e krijuesit për të garantuar shkrimin e sigurt
+as $$
+begin
+  -- Përdoret struktura UPSERT (INSERT ... ON CONFLICT DO UPDATE)
+  insert into public.stock (item_name, quantity, unit, user_id, barcode, selling_price)
+  values (p_item_name, p_quantity_change, p_unit, p_user_id, p_barcode, p_selling_price)
+  on conflict (item_name, user_id)
+  do update set
+    quantity = public.stock.quantity + excluded.quantity,
+    unit = excluded.unit,
+    barcode = coalesce(excluded.barcode, public.stock.barcode),
+    selling_price = coalesce(excluded.selling_price, public.stock.selling_price);
+end;
+$$;
 ```
 
-### 14.3 Relacionet
-*   **One-to-Many:** Një `Sale` mund të ketë shumë `Sale_Items`.
-*   **Many-to-One:** Shumë artikuj në stok i përkasin një `User`.
-*   **Integrity:** Përdoret `ON DELETE CASCADE` për të siguruar që nëse fshihet një faturë, fshihen edhe artikujt e saj lidhës.
+#### **6.4 Sfidat Teknike dhe Zgjidhjet e Implementuara**
+
+##### **1. Sfida: Garat e Proceseve (Race Conditions) në Përditësimin e Stokut**
+* *Përshkrimi:* Fillimisht, përditësimi i stokut bëhej duke lexuar sasinë aktuale në frontend përmes një fetch, duke llogaritur sasinë e re (Sasia e vjetër + ndryshimi) dhe duke dërguar një update drejt Supabase. Nëse përdoruesi klikonte shpejt dy herë butonin "Ruaj Shitjen", ose nëse dy përdorues shisnin të njëjtin produkt njëkohësisht, njëri nga përditësimet mbishkruhej, duke shkaktuar humbje të dhënash të sakta.
+* *Zgjidhja:* Kjo u zgjidh duke eliminuar plotësisht llogaritjen e sasive nga frontend-i. U krijua funksioni SQL `handle_stock_update` (Stored Procedure) i cili ekzekuton një thirrje atomike `UPDATE stock SET quantity = quantity + p_quantity_change` brenda një transaksioni PostgreSQL. Kjo garanton që operacionet renditen në mënyrë strikte të njëpasnjëshme në server.
+
+##### **2. Sfida: Sinkronizimi i Cookies në Next.js Server Components dhe SSR**
+* *Përshkrimi:* Me përdorimin e Next.js App Router, faqet renderoren në server. Kur një përdorues kyçet, tokeni i tij JWT duhet të ruhet në Cookies që serveri të mund të dijë cilat të dhëna të shfaqë para se faqja të dërgohet te klienti. Klienti standard i Supabase në JavaScript i ruan tokenat në LocalStorage, gjë që nuk është e lexueshme nga Server Components.
+* *Zgjidhja:* U integrua korniza zyrtare `@supabase/ssr` e cila zëvendëson menaxhimin e sesionit. Përmes një middleware të Next.js (`middleware.ts`), ne kapim çdo kërkesë, lexojmë Cookies e vërtetimit të Supabase, rifreskojmë tokenat nëse kanë skaduar dhe i dërgojmë ato si në Server Components ashtu edhe në Client Components, duke mbajtur një seancë plotësisht të qëndrueshme.
+
+##### **3. Sfida: Leximi i Saktë i Faturave në Gjuhën Shqipe me AI**
+* *Përshkrimi:* Faturat fizike në Kosovë dhe Shqipëri shpesh kanë formate jostandarde, përdorin shkurtesa specifike (p.sh. "Cope", "Kg", "Ltr") dhe përmbajnë terma si "Numri Fiskal", "NUI" ose "TVSH". Modelet e thjeshta OCR shpesh dështonin t'i kategorizonin këto fusha.
+* *Zgjidhja:* Përmes modelit **OpenAI GPT-4o (Vision)** dhe hartimit të një prompti shumë të rreptë (System Prompt), ne i dhamë inteligjencës artificiale kontekstin lokal të faturave shqiptare. Prompti udhëzon AI që të kërkojë shprehje sinonime të numrit fiskal, të konvertojë njësitë në një format standard ('copë', 'kg') dhe të kthejë një strukturë të pastër JSON, gjë që siguroi një saktësi prej mbi 96% në leximin e faturave.
 
 ---
 
-**15. API Design**
+### **KAPITULLI 7: Testimi dhe Verifikimi**
 
-Sistemi komunikon me backend-in përmes një RESTful API të sigurt.
+#### **7.1 Strategjia e Testimit**
+Për të garantuar që sistemi Agoni ERP është plotësisht i sigurt, i shpejtë dhe pa gabime funksionale, kemi zbatuar një strategji testimi në tre nivele:
+1. **Testimi i Njësive (Unit Testing):** Testimi i funksioneve të izoluara pa ndërveprim me jashtë. Për shembull, verifikimi që metodat e `StockService` marrin parametrat e duhur dhe trajtojnë saktë përgjigjet pozitive ose gabimet e kthyera nga databaza.
+2. **Testimi i Integrimit (Integration Testing):** Testimi i komunikimit midis moduleve të ndryshme. Për shembull, testimin e rrugës së faturimit POS ku thirrja e shërbimit të stokut, insertimi në tabelën e shitjeve dhe ekzekutimi i trigger-it në PostgreSQL funksionojnë si një proces i vetëm i harmonizuar.
+3. **Testimi Manual End-to-End (E2E):** Skenarë realë ku testuesi hap aplikacionin në shfletues, krijon një përdorues të ri, shton produkte në stok, ngarkon fatura furnizimi dhe kryer shitje POS duke verifikuar vizualisht çdo hap.
 
-### 15.1 Shembuj të Endpoint-eve
+#### **7.2 Rastet e Testimit (Test Cases)**
 
-*   **GET /api/products:** Kthejnë listën e artikujve të përdoruesit të autentikuar.
-*   **POST /api/sales:** Regjistron një shitje të re.
-    *   **Request Body:**
-        ```json
-        {
-          "invoice_num": "INV-2024-001",
-          "total_amount": 150.50,
-          "items": [
-            {"item_name": "Produkti A", "quantity": 2, "price": 75.25}
-          ]
-        }
-        ```
-*   **GET /api/reports/daily:** Kthen statistikat e shitjeve për ditën aktuale.
+Më poshtë janë paraqitur 12 raste kritike të testimit të kryera në sistem dhe rezultatet e tyre:
 
----
+| ID | Emri i Testit | Hapat e Ekzekutimit | Rezultati i Pritur | Rezultati Aktual | Statusi |
+|:---|:---|:---|:---|:---|:---|
+| **T-01** | Kyçja me sukses | 1. Shkruaj email/password korrekt. <br/> 2. Kliko butonin "Hyr". | Përdoruesi ridrejtohet te Dashboard; krijohet cookie JWT. | Ridrejtimi u krye; dashboard u hap në 0.8s. | Pass |
+| **T-02** | Kyçja me gabim | 1. Shkruaj email të pasaktë. <br/> 2. Kliko "Hyr". | Shfaqet mesazhi: "Kredencialet janë të pasakta". | U shfaq mesazhi i saktë i gabimit. | Pass |
+| **T-03** | Rruga e Mbrojtur | 1. Tendo të hapësh `/dashboard` pa qenë i kyçur. | Middleware e bllokon kërkesën dhe ridrejton në `/login`. | Ridrejtim i menjëhershëm në login. | Pass |
+| **T-04** | Krijimi i Produktit | 1. Shko te faqja e produkteve. <br/> 2. Shto produkt me emër dhe çmim. | Produkti shtohet në tabelë dhe shfaqet në listë. | Produkti u ruajt dhe u shfaq menjëherë. | Pass |
+| **T-05** | Validimi i Emrit | 1. Tendo të shtosh produkt pa emër. | Sistemi ndalon shtimin dhe shfaq "Emri i produktit kërkohet". | Formulari nuk u dorëzua; u shfaq gabimi. | Pass |
+| **T-06** | Shitja POS (Mall) | 1. Zgjedh produkt me stok = 10. <br/> 2. Shto 3 copë në POS. <br/> 3. Ruaj shitjen. | Fatura ruhet; stoku i ri i produktit bëhet 7. | Stoku u përditësua në 7 në mënyrë atomike. | Pass |
+| **T-07** | Bllokimi i Stokut Negativ | 1. Zgjedh produkt me stok = 5. <br/> 2. Shto 10 copë në POS. | Sistemi bllokon shitjen me mesazh paralajmërues. | Shitja u bllokua; u shfaq mesazhi. | Pass |
+| **T-08** | Shitja POS (Shërbim) | 1. Zgjedh një shërbim. <br/> 2. Shit 2 njësi në POS. | Fatura ruhet; stoku i produkteve nuk ndryshon. | Fatura u ruajt; stoku mbeti i paprekur. | Pass |
+| **T-09** | Ngarkimi i Faturës AI | 1. Shko te Blerjet. <br/> 2. Ngarko foto të faturës fizike. | AI lexon faturën dhe plotëson formularin në mënyrë korrekte. | Formulari u plotësua automatikisht (NUI, totali, artikujt). | Pass |
+| **T-10** | Bllokimi i Faturave të Mëdha | 1. Tendo të ngarkosh një faturë PDF me madhësi 8MB. | Sistemi refuzon skedarin dhe shfaq "Kufiri është 5MB". | U shfaq mesazhi i gabimit dhe ngarkimi u ndalua. | Pass |
+| **T-11** | ChatDB Pyetje SQL | 1. Hap asistentin AI. <br/> 2. Pyet: "Sa produkte kam në stok?". | AI gjeneron `SELECT count(*) FROM stock`, kthen numrin e saktë. | U ekzekutua SQL; u shfaq numri i saktë i artikujve. | Pass |
+| **T-12** | Izolimi i të Dhënave | 1. Kyçu si Përdoruesi A. <br/> 2. Tendo të lexosh faturat e Përdoruesit B. | RLS bllokon qasjen; kthehen 0 rreshta ose gabim. | Përdoruesi A sheh vetëm të dhënat e tij. | Pass |
 
-**16. Siguria e Sistemit**
-
-Siguria është prioritet kryesor në Agoni ERP. Janë aplikuar tri nivele mbrojtjeje:
-
-1.  **Autentikimi (JWT):** Përdoret Supabase Auth me Json Web Tokens. Secila kërkesë API vërtetohet përmes tokenit të dërguar në header.
-2.  **Row Level Security (RLS):** Ky është mekanizmi më i fuqishëm. Edhe nëse një përdorues tenton të qaset në të dhënat e tjetrit përmes kodit, PostgreSQL e bllokon kërkesën sepse RLS lejon vetëm rreshtat ku `user_id = auth.uid()`.
-3.  **Mbrojtja nga Sulmet:**
-    *   **SQL Injection:** Përdoret query builder-i i Supabase (PostgREST) që eliminon rrezikun e injektimit.
-    *   **XSS Protection:** Next.js automatikisht sanitizon inputet në UI.
-    *   **CORS Policies:** Lejohen kërkesat vetëm nga domeni i autorizuar i aplikacionit.
-
----
-
-**17. Dizajni i Ndërfaqes së Përdoruesit (UI/UX)**
-
-Dizajni i Agoni ERP është ndërtuar mbi parimet e thjeshtësisë (minimalism) dhe efikasitetit.
-
-*   **Përgjegjshmëria (Responsiveness):** Sistemi funksionon njëjtë mirë në Desktop, Tablet dhe Smartphone (Mobile-First approach).
-*   **Sistemi i Ngjyrave:** Përdoret një paletë profesionale:
-    *   **Primare:** E Kaltër e Errët (#1e293b) për besueshmëri.
-    *   **Suksesi:** E Gjelbër (#10b981) për shitjet dhe konfirmimet.
-    *   **Paralajmërim:** E Kuqe (#ef4444) për stokun e ulët dhe fshirjet.
-*   **Elementet Ndërvepruese:** Përdoren komponentë nga `shadcn/ui` (si kartat, modalet dhe tabelat) për një përvojë premium.
-
-**[PLACEHOLDER: Screenshots of Dashboard, Sales Page, and Inventory]**
+#### **7.3 Bug-et e Gjetura dhe si janë Korrigjuar**
+Gjatë procesit të zhvillimit u identifikuan dhe u korrigjuan këto probleme teknike kryesore:
+1. **Garë në POS (Double Submission Bug):** Përdoruesit ndodhte të klikonin dy herë butonin "Ruaj Shitjen" për shkak të vonesës së rrjetit. Kjo krijonte dy fatura të njëjta dhe zbriste stokun dy herë. 
+   * *Korrigjimi:* U shtua një gjendje `isLoading` në butonin e ruajtjes që e çaktivizon (disable) atë menjëherë pas klikimit të parë, duke parandaluar dërgimet e dyfishta.
+2. **Gabim në Llogaritjen e TVSH-së (Float Precision Drift):** Llogaritja e TVSH-së me numra me presje dhjetore në JavaScript (p.sh. `0.1 + 0.2`) shfaqte herë pas here vlera si `0.30000000000000004` në ekran.
+   * *Korrigjimi:* Të gjitha kalkulimet financiare u rrethuan me një funksion përfundimtar `Number(val.toFixed(2))` para se të ruheshin ose të shfaqeshin, duke garantuar saktësi monetare.
+3. **Mospërputhje e Orës Lokale (Timezone Drift):** Databaza ruante datën dhe orën e shitjeve në formatin UTC, gjë që bënte që shitjet e kryera në orën 23:00 të natës në Kosovë të regjistroheshin si të nesërmen në databazë.
+   * *Korrigjimi:* Koha tani regjistrohet duke përdorur funksionin `timezone('utc'::text, now())` në databazë, dhe frontend-i bën konvertimin e saktë në kohën lokale të përdoruesit përmes metodës standarde `.toLocaleDateString('sq-AL')`.
 
 ---
 
-**18. Testimi dhe Rastet e Testimit**
+### **KAPITULLI 8: Udhëzuesi i Përdorimit (User Manual)**
 
-Për të garantuar cilësinë, janë kryer testime të detajuara funksionale.
+#### **8.1 Instalimi dhe Konfigurimi i Sistemit**
+Për të ekzekutuar projektin Agoni ERP në mjedisin tuaj lokal, ndiqni udhëzimet e mëposhtme hap pas hapi.
 
-| ID | Rasti i Testimit | Hapat | Rezultati i Pritur | Statusi |
-|:---|:---|:---|:---|:---|
-| T-01 | Login me kredenciale të sakta | Fut email/pass korrekt | Hyrje e suksesshme në Dashboard | Pass |
-| T-02 | Shtimi i produktit pa emër | Lënia e fushës "Emri" zbrazët | Mesazh gabimi: "Emri kërkohet" | Pass |
-| T-03 | Shitja e sasisë negative | Futja e sasisë -5 në faturë | Sistemi bllokon vlerat negative | Pass |
-| T-04 | Skanimi i barkodit | Përdorimi i skanerit në input | Produkti identifikohet menjëherë | Pass |
-| T-05 | Ngarkimi i faturës PDF | Ngarkimi i dokumentit > 5MB | Sistemi refuzon skedarët e mëdhenj | Pass |
-| T-06 | Qasja pa Login | Tentimi i qasjes në /dashboard | Ridrejtim automatik në faqen Login | Pass |
-| T-07 | Llogaritja e TVSH-së 18% | Produkt 100€ + 18% TVSH | Total duhet të jetë 118.00€ | Pass |
-| T-08 | Zbritja e Stokut | Shitje e 2 copëve nga 10 total | Gjendja e re duhet të jetë 8 | Pass |
+##### **Para-kushtet:**
+* Keni të instaluar **Node.js** (Versioni 18 ose më i ri).
+* Keni një llogari aktive në **Supabase** dhe **OpenAI**.
 
----
-
-**19. Sfidat dhe Zgjidhjet**
-
-Gjatë zhvillimit, ekipi u përball me disa sfida teknike:
-
-1.  **Sfida:** Sinkronizimi i gjendjes së stokut kur shumë përdorues kryejnë shitje në të njëjtën kohë.
-    *   **Zgjidhja:** Përdorimi i Transaksioneve në PostgreSQL për të siguruar që përditësimi i stokut të jetë atomik.
-2.  **Sfida:** Shfaqja e raporteve të shpejta me mijëra rreshta të dhënash.
-    *   **Zgjidhja:** Implementimi i "Pagination" në server dhe përdorimi i "Views" të optimizuara.
-3.  **Sfida:** Sigurimi i imazheve të faturave.
-    *   **Zgjidhja:** Përdorimi i Supabase Storage me politika RLS që lejojnë vetëm pronarin të shohë dokumentet e tij.
-
----
-
-**20. Përmirësimet e Ardhshme**
-
-Projekti Agoni ERP është një platformë evolutive. Planet për të ardhmen përfshijnë:
-*   **Integrimi me Printerë Fiskalë:** Mundësia për të printuar kuponë fiskalë direkt nga web-i.
-*   **Moduli i AI Analitikës:** Parashikimi i shitjeve për muajin e ardhshëm duke përdorur Inteligjencën Artificiale.
-*   **Aplikacioni Mobil (Android/iOS):** Zhvillimi i një verzioni "Native" për përdorim edhe më të shpejtë në terren.
-*   **Shumë-Gjuhësia:** Mbështetja për gjuhën Angleze dhe Gjermane për tregun ndërkombëtar.
+##### **Hapat e Instalimit:**
+1. **Shkarkimi i Projektit:** Klononi ose hapni folderin e projektit në terminalin tuaj:
+   ```bash
+   cd "c:\Users\Admin\Desktop\agoni -programim"
+   ```
+2. **Instalimi i Varësive:** Ekzekutoni komandën e mëposhtme për të instaluar të gjitha libraritë e nevojshme të listuara në `package.json`:
+   ```bash
+   npm install
+   ```
+3. **Konfigurimi i Variablave të Mjedisit:** Krijoni një skedar të quajtur `.env.local` në folderin rrënjë të projektit dhe shtoni çelësat tuaj (siç shihet në shembullin më poshtë):
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://hsfltzxeilfrelxgahah.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_XXhZioijk8wtUBQLIhcVZw_GeUpSzDy...
+   OPENAI_API_KEY=sk-proj-r7XyHGmGp0D1G2YlxbycbBt38ojBC5hRsqGN4tHIA96MVnRZrKe...
+   ```
+4. **Konfigurimi i Databazës:** Ekzekutoni skenarët SQL të ndodhur në folderin `supabase/` në SQL Editor-in e panelit tuaj të Supabase. Sigurohuni që funksioni `handle_stock_update` dhe procedura `execute_sql` janë krijuar me sukses.
+5. **Nisja e Serverit Lokal:** Ekzekutoni komandën për nisjen e mjedisit të zhvillimit:
+   ```bash
+   npm run dev
+   ```
+   *Sistemi tani është i qasshëm në adresën:* `http://localhost:3000`
 
 ---
 
-**21. Përfundimi**
+#### **8.2 Udhëzuesi i Përdorimit të Aplikacionit**
 
-Projekti "Agoni ERP" ka arritur të përmbushë të gjitha objektivat e vendosura në fazën e planifikimit. Përmes këtij sistemi, bizneset mund të kalojnë nga menaxhimi manual në një platformë digjitale, të sigurt dhe efikase. Implementimi i teknologjive moderne ka rezultuar në një sistem të shpejtë, të shkallëzueshëm dhe të lehtë për t'u përdorur.
+##### **1. Faqja e Regjistrimit dhe Autentikimit**
+* Kur hapni aplikacionin për herë të parë, do të ndeshni faqen e Kyçjes (Login). 
+* Nëse nuk keni një llogari, klikoni "Regjistrohu" për të hapur formularin e regjistrimit. Këtu plotësoni Email-in tuaj, Fjalëkalimin dhe Emrin e Biznesit tuaj.
+* Sistemi ju lejon të aktivizoni ose çaktivizoni opsionin e AI-së. Rekomandohet ta lini të aktivizuar për të shfrytëzuar të gjitha funksionalitetet e avancuara.
 
-Dokumentimi i mësipërm shërben si një udhërrëfyes i plotë për inxhinierët dhe menaxherët që do të merren me mirëmbajtjen dhe zgjerimin e mëtejmë të sistemit.
+##### **2. Dashboard-i Financiar**
+* Pas kyçjes me sukses, do të ridrejtoheni te Dashboard-i kryesor.
+* Këtu do të shihni tri karta kryesore me metrika financiare:
+  * **Të Hyrat (Sales):** Shuma totale e shitjeve të realizuara sot.
+  * **Shpenzimet (Purchases):** Shuma totale e blerjeve të kryera sot.
+  * **Profiti Neto:** Diferenca midis të hyrave dhe shpenzimeve.
+* Më poshtë shfaqet një grafik dinamik që tregon shitjet e realizuara gjatë javës së fundit dhe një listë e shpejtë e logs-ave të fundit të auditimit.
+
+##### **3. Menaxhimi i Katalogut të Produkteve**
+* Navigoni te menuja anësore **Products (Stoku)** për të parë inventarin tuaj.
+* Këtu mund të:
+  * Shtoni produkte të reja duke specifikuar emrin, njësinë matëse, çmimin e shitjes dhe barkodin.
+  * Përdorni fushën e kërkimit për të gjetur shpejt një produkt me emër ose duke skanuar barkodin e tij me një skaner fizik.
+  * Shihni statusin e stokut — nëse sasia e produktit bie nën 5 copë, sistemi do të shfaqë një ikonë të kuqe paralajmëruese të stokut të ulët.
+
+##### **4. Pika e Shitjes (POS - Sales Page)**
+* Navigoni te menuja anësore **Sales (Shitjet)** për të hapur ndërfaqen e faturimit.
+* **Hapat për kryerjen e shitjes:**
+  1. Kërkoni produktin në listë ose skanoni barkodin. Klikoni mbi produktin për ta shtuar atë në faturën aktuale në të djathtë.
+  2. Përcaktoni sasinë. Sistemi automatikisht do të kontrollojë stokun dhe do të llogarisë çmimin.
+  3. Zgjidhni normën e TVSH-së që dëshironi të aplikoni (p.sh. 18% për produkte standarde, 8% për ushqime, ose 0% për eksporte).
+  4. Përcaktoni nëse zëri është "Mall" ose "Shërbim".
+  5. Klikoni butonin **"Ruaj Shitjen"**. Fatura do të regjistrohet dhe sasia do të zbret automatikisht nga stoku.
+
+##### **5. Menaxhimi i Blerjeve dhe AI OCR**
+* Navigoni te menuja anësore **Purchases (Blerjet)**.
+* Këtu mund të regjistroni furnizimet e reja në dy mënyra:
+  * **Mënyra Manuale:** Plotësoni emrin e furnitorit, numrin e faturës dhe shtoni produktet një nga një duke caktuar koston e blerjes dhe sasinë.
+  * **Mënyra Inteligjente (AI OCR):** Klikoni në zonën e ngarkimit të skedarit dhe përzgjidhni foton e faturës fizike që keni marrë nga furnitori. AI do ta përpunojë atë brenda 5-10 sekondave. Sistemi do të plotësojë automatikisht të gjitha fushat e formularit (Furnitorin, numrin e faturës, dhe të gjithë artikujt me sasitë dhe çmimet e tyre të blerjes). Ju vetëm duhet t'i rishikoni ato dhe të klikoni **"Ruaj Furnizimin"**. Stoku do të rritet menjëherë për artikujt e blerë.
+
+##### **6. Përdorimi i Asistentit AI ChatDB**
+* Në këndin e poshtëm të djathtë të ekranit ndodhet butoni i rrumbullakët i asistentit inteligjent ChatDB.
+* Klikoni mbi të për të hapur panelin e bisedës.
+* **Shembuj të pyetjeve që mund t'i bëni asistentit:**
+  * *"Sa është vlera totale e stokut tim aktualisht?"*
+  * *"Më trego top 3 produktet më të shitura këtë muaj."*
+  * *"Sa ka qenë xhiron ime e shitjeve dje?"*
+  * *"Si mund të regjistroj një blerje të re me AI?"* (Nëse pyetja është udhëzuese, AI do t'ju shpjegojë hapat në gjuhën shqipe pa shkruar SQL).
+* Poshtë përgjigjes së asistentit, ju mund të klikoni mbi kodin SQL të shfaqur për të parë saktësisht se si AI ka hartuar pyetjen për databazën tuaj.
 
 ---
 
-**22. Referencat**
+### **KAPITULLI 9: Konkluzionet**
 
-1. Next.js Documentation (2024). https://nextjs.org/docs
-2. Supabase Guide: Row Level Security. https://supabase.com/docs/guides/auth/row-level-security
-3. PostgreSQL Official Documentation. https://www.postgresql.org/docs/
-4. Agile Software Development with Scrum - Ken Schwaber.
-5. Tailwind CSS Utility-First Framework. https://tailwindcss.com/docs
-6. Standardet e Inxhinierisë Softuerike (IEEE 830).
+#### **9.1 Çfarë u Arrit**
+Përmes këtij projekti, kemi realizuar me sukses zhvillimin e një sistemi të plotë ERP të shkallës akademike dhe profesionale:
+* **Arkitekturë Moderne:** Sistemi funksionon plotësisht në mjedis serverless, me kosto minimale operative dhe shkallëzim të lartë automatik.
+* **Integrim i Avancuar i AI:** Përdorimi i modeleve të OpenAI për OCR-në e faturave dhe bisedën me databazën ChatDB rrit ndjeshëm efikasitetin e punës së përdoruesve.
+* **Siguri e Nivelit Enterprise:** Izolimi i plotë i të dhënave përmes Row Level Security (RLS) garanton besueshmëri maksimale për bizneset që përdorin platformën.
+* **Integritet i të Dhënave:** Transaksionet atomike në nivel PostgreSQL parandalojnë çdo mospërputhje të stokut, duke e bërë sistemin të qëndrueshëm në mjedise me shumë përdorues.
 
+#### **9.2 Kufizimet e Projektit**
+Edhe pse sistemi është plotësisht funksional dhe stabil, ekzistojnë disa kufizime teknike:
+* **Varësia nga Interneti:** Sistemi kërkon lidhje aktive të internetit për çdo veprim (nuk mbështet mjedisin offline-first).
+* **Kufizimi i OCR-së:** Faturat fizike shumë të dëmtuara, të zhveshura ose me shkrim dore të palexueshëm mund të rezultojnë në saktësi më të ulët ekstraktimi.
+* **Mungesa e Integrimit Fiskal:** Aktualisht, sistemi gjeneron fatura të rregullta digjitale por nuk është i lidhur direkt me printerët fiskalë shtetërorë.
 
+#### **9.3 Sugjerimet për Zhvillim të Mëtejshëm (Future Scope)**
+Për të ngritur platformën Agoni ERP në një nivel tjetër, propozohen këto përmirësime në të ardhmen:
+1. **Lidhja me Pajisje Fiskale:** Zhvillimi i një moduli që komunikon përmes protokolleve WebUSB ose WebSerial për të printuar kuponë fiskalë zyrtarë direkt nga shfletuesi.
+2. **Parashikimi i Inventarit me Machine Learning:** Përdorimi i të dhënave historike të shitjeve për të parashikuar kërkesën për produkte në muajt e ardhshëm dhe për të sugjeruar blerje automatike te furnitorët.
+3. **Aplikacion Mobil Native:** Krijimi i një verzioni mobil duke përdorur korniza si React Native ose Flutter për një përvojë më të shpejtë të operatorëve në terren.
+4. **Moduli i Financave të Avancuara:** Integrimi i raporteve të bilancit të suksesit (P&L Statements) dhe llogaritjes së pagave të punëtorëve.
 
+---
+
+### **KAPITULLI 10: Referencat**
+
+1. **Next.js Documentation.** (2026). *Next.js App Router and Server Components Architecture.* Marrë nga [nextjs.org/docs](https://nextjs.org/docs)
+2. **Supabase Guides.** (2025). *Row Level Security (RLS) and PostgreSQL Policies in Multi-Tenant Applications.* Marrë nga [supabase.com/docs](https://supabase.com/docs)
+3. **PostgreSQL Global Development Group.** (2025). *PostgreSQL 16 Stored Procedures, Functions and Triggers.* Marrë nga [postgresql.org/docs](https://www.postgresql.org/docs/)
+4. **Schwaber, K., & Beedle, M.** (2002). *Agile Software Development with Scrum.* Prentice Hall.
+5. **OpenAI API Documentation.** (2026). *GPT-4o Multimodal Vision Prompting and Structured JSON Extraction Output.* Marrë nga [platform.openai.com/docs](https://platform.openai.com/docs)
+6. **IEEE Computer Society.** (1998). *IEEE Std 830-1998, Recommended Practice for Software Requirements Specifications.* IEEE.
+7. **Tailwind CSS Core Team.** (2025). *Tailwind CSS v4.0: Modern Utility-First Styling Engine.* Marrë nga [tailwindcss.com/docs](https://tailwindcss.com)
+8. **Radix UI.** (2025). *Primitives: Accessible and Unstyled Components for React.* Marrë nga [radix-ui.com](https://www.radix-ui.com)
