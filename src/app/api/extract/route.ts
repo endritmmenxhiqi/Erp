@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const AI_TIMEOUT_MS = 35000;
+const MAX_FILES = 10;
+const AI_TIMEOUT_MS = 60000;
 
 export const runtime = "nodejs";
-export const maxDuration = 45;
+export const maxDuration = 60;
 
 type UploadedFile = {
   buffer: Buffer;
@@ -12,44 +13,67 @@ type UploadedFile = {
   size: number;
 };
 
-async function readUploadedFile(req: NextRequest): Promise<UploadedFile> {
+async function readUploadedFiles(req: NextRequest): Promise<UploadedFile[]> {
   const contentType = req.headers.get("content-type") || "";
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await req.formData();
-    const file = formData.get("file");
+    const files: UploadedFile[] = [];
 
-    if (!(file instanceof File)) {
+    // Support both "files" (multiple) and "file" (single) field names
+    const allEntries = formData.getAll("files");
+    if (allEntries.length === 0) {
+      // Fallback: try "file" field (single file, backward compatible)
+      const singleFile = formData.get("file");
+      if (singleFile instanceof File) {
+        allEntries.push(singleFile);
+      }
+    }
+
+    for (const entry of allEntries) {
+      if (entry instanceof File) {
+        files.push({
+          buffer: Buffer.from(await entry.arrayBuffer()),
+          mimeType: entry.type,
+          size: entry.size,
+        });
+      }
+    }
+
+    if (files.length === 0) {
       throw new Error("Asnje skedar nuk u ngarkua");
     }
 
-    return {
-      buffer: Buffer.from(await file.arrayBuffer()),
-      mimeType: file.type,
-      size: file.size,
-    };
+    return files;
   }
 
   if (contentType.includes("application/json")) {
     const body = await req.json().catch(() => null);
-    const image = body?.image;
 
-    if (typeof image !== "string") {
+    // Support both "images" (array) and "image" (single string)
+    const images: string[] = [];
+    if (Array.isArray(body?.images)) {
+      images.push(...body.images);
+    } else if (typeof body?.image === "string") {
+      images.push(body.image);
+    }
+
+    if (images.length === 0) {
       throw new Error("Asnje skedar nuk u ngarkua");
     }
 
-    const match = image.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) {
-      throw new Error("Formati i fotos nuk eshte valid");
-    }
-
-    const buffer = Buffer.from(match[2], "base64");
-
-    return {
-      buffer,
-      mimeType: match[1],
-      size: buffer.length,
-    };
+    return images.map((image) => {
+      const match = image.match(/^data:([^;]+);base64,(.+)$/);
+      if (!match) {
+        throw new Error("Formati i fotos nuk eshte valid");
+      }
+      const buffer = Buffer.from(match[2], "base64");
+      return {
+        buffer,
+        mimeType: match[1],
+        size: buffer.length,
+      };
+    });
   }
 
   throw new Error("Formati i kerkeses nuk perkrahet");
@@ -73,20 +97,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mungon OpenAI API Key ne .env.local" }, { status: 500 });
     }
 
-    const file = await readUploadedFile(req);
+    const files = await readUploadedFiles(req);
 
-    if (!file.mimeType.startsWith("image/") && file.mimeType !== "application/pdf") {
-      return NextResponse.json({ error: "Ngarkoni vetem imazh ose PDF." }, { status: 400 });
+    if (files.length > MAX_FILES) {
+      return NextResponse.json(
+        { error: `Maksimumi i fotove eshte ${MAX_FILES}.` },
+        { status: 400 }
+      );
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "Skedari eshte shume i madh. Kufiri eshte 5MB." }, { status: 400 });
+    for (const file of files) {
+      if (!file.mimeType.startsWith("image/") && file.mimeType !== "application/pdf") {
+        return NextResponse.json({ error: "Ngarkoni vetem imazh ose PDF." }, { status: 400 });
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json({ error: "Nje skedar eshte shume i madh. Kufiri eshte 5MB per foto." }, { status: 400 });
+      }
     }
 
-    const base64Data = file.buffer.toString("base64");
+    const imageContentBlocks = files.map((file) => ({
+      type: "image_url" as const,
+      image_url: {
+        url: `data:${file.mimeType};base64,${file.buffer.toString("base64")}`,
+      },
+    }));
 
     const prompt = `
-      Extract information from this invoice image.
+      Extract information from this invoice. ${files.length > 1 ? `This invoice has ${files.length} pages/images. Combine ALL items from ALL pages into a single result. Do NOT duplicate header info - use the first page for invoice number, date, etc.` : ""}
       Return ONLY a JSON object with this structure:
       {
         "invoice_num": "string",
@@ -138,12 +175,7 @@ export async function POST(req: NextRequest) {
                 type: "text",
                 text: prompt,
               },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${file.mimeType};base64,${base64Data}`,
-                },
-              },
+              ...imageContentBlocks,
             ],
           },
         ],

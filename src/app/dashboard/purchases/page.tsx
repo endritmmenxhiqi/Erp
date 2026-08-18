@@ -58,8 +58,8 @@ export default function PurchasesPage() {
   const [formError, setFormError] = useState("")
   const [profile, setProfile] = useState<Profile | null>(null)
   const [supabase] = useState(() => createClient())
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
-  const [invoicePreview, setInvoicePreview] = useState<string | null>(null)
+  const [invoiceFiles, setInvoiceFiles] = useState<File[]>([])
+  const [invoicePreviews, setInvoicePreviews] = useState<string[]>([])
 
   useEffect(() => {
     async function fetchProfile() {
@@ -146,38 +146,81 @@ export default function PurchasesPage() {
   }, [watchedItems, form])
 
   const handleInvoiceImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("Imazhi është shumë i madh (max 5MB)")
+    const selectedFiles = Array.from(event.target.files || [])
+    if (selectedFiles.length === 0) return
+
+    const totalFiles = invoiceFiles.length + selectedFiles.length
+    if (totalFiles > 10) {
+      toast.error("Maksimumi i fotove është 10")
       return
     }
-    setInvoiceFile(file)
-    const reader = new FileReader()
-    reader.onload = (e) => setInvoicePreview(e.target?.result as string)
-    reader.readAsDataURL(file)
+
+    const validFiles: File[] = []
+    for (const file of selectedFiles) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name} është shumë i madh (max 5MB)`)
+        continue
+      }
+      validFiles.push(file)
+    }
+
+    if (validFiles.length === 0) return
+
+    setInvoiceFiles((prev) => [...prev, ...validFiles])
+
+    for (const file of validFiles) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setInvoicePreviews((prev) => [...prev, e.target?.result as string])
+      }
+      reader.readAsDataURL(file)
+    }
     event.target.value = ""
   }
 
-  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const removeInvoiceImage = (index: number) => {
+    setInvoiceFiles((prev) => prev.filter((_, i) => i !== index))
+    setInvoicePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
 
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("File is too large (max 5MB)")
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files || [])
+    if (selectedFiles.length === 0) return
+
+    const validFiles: File[] = []
+    for (const file of selectedFiles) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name} është shumë i madh (max 5MB)`)
+        continue
+      }
+      validFiles.push(file)
+    }
+
+    if (validFiles.length === 0) return
+    if (validFiles.length > 10) {
+      toast.error("Maksimumi i fotove është 10")
       return
     }
 
-    // Also set as invoice file for saving
-    setInvoiceFile(file)
-    const reader = new FileReader()
-    reader.onload = (e) => setInvoicePreview(e.target?.result as string)
-    reader.readAsDataURL(file)
+    // Also set as invoice files for saving
+    setInvoiceFiles(validFiles)
+    const previews: string[] = []
+    for (const file of validFiles) {
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (e) => resolve(e.target?.result as string)
+        reader.readAsDataURL(file)
+      })
+      previews.push(dataUrl)
+    }
+    setInvoicePreviews(previews)
 
     setIsExtracting(true)
     try {
       const formData = new FormData()
-      formData.append("file", file)
+      for (const file of validFiles) {
+        formData.append("files", file)
+      }
 
       const response = await fetch("/api/extract", {
         method: "POST",
@@ -210,7 +253,7 @@ export default function PurchasesPage() {
         })))
       }
 
-      toast.success("AI Extraction Success!")
+      toast.success(`AI Extraction Success! (${validFiles.length} foto)`)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "AI Extraction failed")
     } finally {
@@ -225,18 +268,24 @@ export default function PurchasesPage() {
     try {
       const user = await getCurrentUser()
 
-      // Upload invoice image if present
+      // Upload invoice images if present
       let imageUrl: string | null = null
-      if (invoiceFile) {
-        const ext = invoiceFile.name.split('.').pop() || 'jpg'
-        const filePath = `${user.id}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('invoices')
-          .upload(filePath, invoiceFile, { upsert: true })
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('invoices').getPublicUrl(filePath)
-          imageUrl = urlData.publicUrl
+      if (invoiceFiles.length > 0) {
+        const uploadedUrls: string[] = []
+        for (let i = 0; i < invoiceFiles.length; i++) {
+          const file = invoiceFiles[i]
+          const ext = file.name.split('.').pop() || 'jpg'
+          const filePath = `${user.id}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${i}.${ext}`
+          const { error: uploadError } = await supabase.storage
+            .from('invoices')
+            .upload(filePath, file, { upsert: true })
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('invoices').getPublicUrl(filePath)
+            uploadedUrls.push(urlData.publicUrl)
+          }
         }
+        // Store as comma-separated URLs or single URL
+        imageUrl = uploadedUrls.length > 0 ? uploadedUrls.join(',') : null
       }
 
       const { data: purchaseData, error: purchaseError } = await supabase.from("purchases").insert({
@@ -279,8 +328,8 @@ export default function PurchasesPage() {
         seller_fiscal_num: "",
         items: [{ item_name: "", quantity: 1, unit: "cope", cost_price: 0 }],
       })
-      setInvoiceFile(null)
-      setInvoicePreview(null)
+      setInvoiceFiles([])
+      setInvoicePreviews([])
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Purchase registration failed")
     } finally {
@@ -310,6 +359,7 @@ export default function PurchasesPage() {
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleFileUpload}
                   disabled={isExtracting}
                   className="absolute inset-0 opacity-0 cursor-pointer z-10"
@@ -322,8 +372,36 @@ export default function PurchasesPage() {
                   )}
                 </div>
                 <p className="text-sm font-bold text-primary">{isExtracting ? t("processing") : t("ai_extract")}</p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</p>
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG deri 5MB · Deri 10 foto</p>
               </div>
+
+              {/* Multi-image previews for AI extraction */}
+              {invoicePreviews.length > 0 && (
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {invoicePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => removeInvoiceImage(index)}
+                        className="absolute -top-2 -right-2 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="relative">
+                        <img
+                          src={preview}
+                          alt={`Faqja ${index + 1}`}
+                          className="h-20 w-20 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => window.open(preview, '_blank')}
+                        />
+                        <span className="absolute bottom-1 right-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                          {index + 1}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -335,29 +413,39 @@ export default function PurchasesPage() {
                 <Plus className="mr-2 h-5 w-5 text-primary" />
                 {t("manual_entry")}
               </CardTitle>
-              {/* Invoice Image Upload (non-AI) */}
+              {/* Invoice Image Upload (non-AI, multi-image) */}
               <div className="flex items-center gap-3">
-                {invoicePreview ? (
-                  <div className="relative group">
-                    <button
-                      type="button"
-                      onClick={() => { setInvoiceFile(null); setInvoicePreview(null) }}
-                      className="absolute -top-2 -right-2 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                    <img
-                      src={invoicePreview}
-                      alt="Fatura"
-                      className="h-16 w-16 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
-                      onClick={() => window.open(invoicePreview!, '_blank')}
-                    />
+                {invoicePreviews.length > 0 ? (
+                  <div className="flex items-center gap-2">
+                    {invoicePreviews.map((preview, index) => (
+                      <div key={index} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => removeInvoiceImage(index)}
+                          className="absolute -top-2 -right-2 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <img
+                          src={preview}
+                          alt={`Faqja ${index + 1}`}
+                          className="h-12 w-12 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => window.open(preview, '_blank')}
+                        />
+                      </div>
+                    ))}
+                    {invoicePreviews.length < 10 && (
+                      <label className="flex items-center justify-center w-12 h-12 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer">
+                        <Plus className="w-4 h-4 text-primary" />
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleInvoiceImageSelect} />
+                      </label>
+                    )}
                   </div>
                 ) : (
                   <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer text-sm font-bold text-primary">
                     <ImageIcon className="w-4 h-4" />
                     Ngarko Faturën
-                    <input type="file" accept="image/*" className="hidden" onChange={handleInvoiceImageSelect} />
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleInvoiceImageSelect} />
                   </label>
                 )}
               </div>

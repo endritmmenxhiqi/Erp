@@ -427,9 +427,43 @@ export default function PurchasesBookPage() {
                   </div>
                </div>
 
+               {/* Invoice Images Gallery */}
+               {selectedPurchase.image_url && (() => {
+                 const imageUrls = selectedPurchase.image_url.split(",").filter(Boolean)
+                 return (
+                   <div className="pt-4 border-t border-border space-y-3">
+                     <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center">
+                        <FileText className="w-4 h-4 mr-2 text-primary" /> {t("view_invoice")} ({imageUrls.length} {imageUrls.length === 1 ? "faqe" : "faqe"})
+                     </h3>
+                     <div className="flex flex-wrap gap-3">
+                       {imageUrls.map((url, idx) => (
+                         <div key={idx} className="relative group">
+                           <img
+                             src={url}
+                             alt={`Faqja ${idx + 1}`}
+                             className="h-24 w-24 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                             onClick={() => window.open(url, '_blank')}
+                           />
+                           <span className="absolute bottom-1 right-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                             Faqja {idx + 1}
+                           </span>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )
+               })()}
+
                <div className="flex justify-end space-x-4 pt-8">
                   {selectedPurchase.image_url && (
-                    <Button variant="outline" className="h-12 border-border" onClick={() => window.open(selectedPurchase.image_url as string, '_blank')}>
+                    <Button
+                      variant="outline"
+                      className="h-12 border-border font-bold"
+                      onClick={() => {
+                        const urls = selectedPurchase.image_url!.split(",").filter(Boolean)
+                        urls.forEach(url => window.open(url, '_blank'))
+                      }}
+                    >
                        <FileText className="w-5 h-5 mr-2" /> {t("view_invoice")}
                     </Button>
                   )}
