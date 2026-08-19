@@ -90,6 +90,108 @@ function parseJsonResponse(responseText: string) {
   return JSON.parse(cleaned);
 }
 
+type ExtractedPageResult = {
+  invoice_num?: string | null;
+  date?: string | null;
+  total_cost?: number | null;
+  seller_fiscal_num?: string | null;
+  items?: Array<{
+    item_name?: string;
+    quantity?: number;
+    unit?: string;
+    cost_price?: number;
+  }>;
+};
+
+async function extractSinglePage(
+  file: UploadedFile,
+  pageIndex: number,
+  totalPages: number,
+  apiKey: string
+): Promise<ExtractedPageResult> {
+  const isMulti = totalPages > 1;
+  const prompt = `You are an expert invoice OCR and data extraction system.
+${
+  isMulti
+    ? `This is PAGE ${pageIndex} OF ${totalPages} of a multi-page invoice in Albanian or English.`
+    : `This is an invoice in Albanian or English.`
+}
+
+Extract ALL table item rows visible on this specific page image.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "invoice_num": "string or null",
+  "date": "YYYY-MM-DD or null",
+  "total_cost": number or null,
+  "seller_fiscal_num": "string or null",
+  "items": [
+    {
+      "item_name": "string",
+      "quantity": number,
+      "unit": "string",
+      "cost_price": number
+    }
+  ]
+}
+
+CRITICAL RULES:
+1. ITEMS: Extract EVERY single item row visible in the table on this page image. Do NOT skip any rows.
+2. For each item's "cost_price": PREFERRED method is to use the per-item line total INCLUDING VAT (often labeled "SHUMA", "Total", "Amount") DIVIDED by the quantity.
+   Example: if SHUMA=778.80 and quantity=2, then cost_price=389.40.
+   FALLBACK: calculate cost_price = unit_price * (1 + TVSH_rate/100).
+   cost_price MUST ALWAYS include VAT/TVSH.
+3. If unit is not specified, use 'cope'.
+4. "total_cost": If this page displays the FINAL grand total to pay ("PËR T'U PAGUAR", "TOTALI", "Gjithsej me TVSH", "Grand Total"), extract that number. If this page only has a subtotal or no final total, set total_cost to null.
+5. "invoice_num", "date", "seller_fiscal_num": If visible on this page (usually in the header), extract them; otherwise set them to null.
+6. Return ONLY the raw JSON object, no explanation.`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${file.mimeType};base64,${file.buffer.toString("base64")}`,
+                detail: "high",
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+    }),
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => null);
+    const msg = errorPayload?.error?.message || `Procesimi i faqes ${pageIndex} deshtoi.`;
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices?.[0]?.message?.content;
+  if (!responseText) {
+    throw new Error(`AI nuk ktheu te dhena per faqen ${pageIndex}.`);
+  }
+
+  return parseJsonResponse(responseText);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -115,132 +217,76 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const isMultiPage = files.length > 1;
-    const prompt = `You are an expert invoice OCR and data extraction system for invoices in Albanian or English.
-${
-  isMultiPage
-    ? `CRITICAL MULTI-PAGE INVOICE INSTRUCTION:
-This invoice consists of ${files.length} PAGES / IMAGES provided in sequential order (Page 1 to Page ${files.length}).
-- You MUST scan and extract items from EVERY SINGLE PAGE (Page 1, Page 2, ..., Page ${files.length}).
-- DO NOT extract only the last page! Multi-page invoices have item tables starting on Page 1 and continuing across subsequent pages.
-- You MUST concatenate ALL item rows from ALL pages in sequential order into a single combined 'items' array.
-- Example: If Page 1 has 12 items and Page 2 has 8 items, your final 'items' array MUST contain all 20 items. Skipping Page 1 or any intermediate page is a strict failure.
-- Invoice number, date, and seller fiscal number should be read from Page 1 (header).
-- Total cost ("total_cost") is the final grand total to pay (usually located at the bottom of the last page).`
-    : ""
-}
+    // Process all pages in parallel
+    const pageResults = await Promise.all(
+      files.map((file, index) => extractSinglePage(file, index + 1, files.length, apiKey))
+    );
 
-Return ONLY a JSON object with this exact structure:
-{
-  "invoice_num": "string",
-  "date": "YYYY-MM-DD",
-  "total_cost": number,
-  "seller_fiscal_num": "string",
-  "items": [
-    {
-      "item_name": "string",
-      "quantity": number,
-      "unit": "string",
-      "cost_price": number
-    }
-  ]
-}
+    // Merge page results deterministically
+    let invoice_num = "";
+    let date = "";
+    let seller_fiscal_num = "";
+    let total_cost = 0;
+    const allItems: Array<{
+      item_name: string;
+      quantity: number;
+      unit: string;
+      cost_price: number;
+    }> = [];
 
-CRITICAL RULES FOR PRICES AND VAT/TVSH:
-- "total_cost" MUST be the FINAL total amount to pay INCLUDING VAT/TVSH (look for "PËR T'U PAGUAR", "TOTALI", "Gjithsej me TVSH", "Grand Total").
-- Each item on the invoice may have a DIFFERENT VAT/TVSH rate (e.g. 18%, 8%, 0%). You MUST read the actual TVSH rate for EACH item from the invoice. Do NOT assume all items have the same VAT rate.
-- For each item's "cost_price": PREFERRED method is to use the per-item line total INCLUDING VAT (often labeled "SHUMA", "Total", "Amount") DIVIDED by the quantity.
-  Example: if SHUMA=778.80 and quantity=2, then cost_price=389.40
-- FALLBACK: if no line total column exists, read the unit price AND the actual TVSH rate for that specific item, then calculate: cost_price = unit_price * (1 + TVSH_rate/100).
-  Example: unit price=330, that item's TVSH=18%, then cost_price = 330 * 1.18 = 389.40
-  Example: unit price=100, that item's TVSH=8%, then cost_price = 100 * 1.08 = 108.00
-- Do NOT use the base unit price without VAT. The cost_price must ALWAYS include the item's actual VAT/TVSH.
-- The sum of (quantity * cost_price) for all items should approximately equal the total_cost.
+    for (let i = 0; i < pageResults.length; i++) {
+      const p = pageResults[i];
 
-OTHER RULES:
-- If a value is not found, use null or empty string.
-- For items, if the unit is not clear, use 'cope'.
-- The language of the invoice might be Albanian or English.
-- Albanian invoices often use: ÇMIMI UN. (unit price without VAT), TVSH (VAT rate per item), SHUMA (line total with VAT).
-- Return ONLY the JSON object, no other text or explanation.`;
+      if (!invoice_num && p.invoice_num) invoice_num = p.invoice_num;
+      if (!date && p.date) date = p.date;
+      if (!seller_fiscal_num && p.seller_fiscal_num) seller_fiscal_num = p.seller_fiscal_num;
 
-    const contentBlocks: Array<
-      | { type: "text"; text: string }
-      | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } }
-    > = [
-      {
-        type: "text",
-        text: prompt,
-      },
-    ];
-
-    files.forEach((file, index) => {
-      contentBlocks.push({
-        type: "text",
-        text: `\n=== INVOICE PAGE ${index + 1} OF ${files.length} ===\n(Extract all item rows from this page and merge with other pages)`,
-      });
-      contentBlocks.push({
-        type: "image_url",
-        image_url: {
-          url: `data:${file.mimeType};base64,${file.buffer.toString("base64")}`,
-          detail: "high",
-        },
-      });
-    });
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: contentBlocks,
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      const errorPayload = await response.json().catch(() => null);
-      const upstreamMessage = errorPayload?.error?.message || "Procesimi me AI deshtoi.";
-
-      if (response.status === 401) {
-        return NextResponse.json(
-          {
-            error:
-              "OpenAI API key nuk eshte valid ose mungon ne Vercel. Kontrollo OPENAI_API_KEY te Environment Variables.",
-          },
-          { status: 502 }
-        );
+      const pageTotal = Number(p.total_cost);
+      if (!Number.isNaN(pageTotal) && pageTotal > 0) {
+        total_cost = pageTotal;
       }
 
-      return NextResponse.json(
-        { error: upstreamMessage },
-        { status: response.status >= 500 ? 502 : response.status }
+      if (Array.isArray(p.items)) {
+        for (const item of p.items) {
+          if (item && typeof item === "object") {
+            allItems.push({
+              item_name: item.item_name || "",
+              quantity: Number(item.quantity) || 1,
+              unit: item.unit || "cope",
+              cost_price: Number(item.cost_price) || 0,
+            });
+          }
+        }
+      }
+    }
+
+    // Fallbacks if header info was on another page
+    if (!invoice_num) {
+      invoice_num = pageResults.find((p) => Boolean(p.invoice_num))?.invoice_num || "";
+    }
+    if (!date) {
+      date = pageResults.find((p) => Boolean(p.date))?.date || "";
+    }
+    if (!seller_fiscal_num) {
+      seller_fiscal_num = pageResults.find((p) => Boolean(p.seller_fiscal_num))?.seller_fiscal_num || "";
+    }
+
+    // If total_cost is still 0, calculate sum of (qty * cost_price)
+    if (total_cost <= 0 && allItems.length > 0) {
+      total_cost = parseFloat(
+        allItems.reduce((acc, it) => acc + it.quantity * it.cost_price, 0).toFixed(2)
       );
     }
 
-    const data = await response.json();
+    const mergedData = {
+      invoice_num,
+      date,
+      seller_fiscal_num,
+      total_cost,
+      items: allItems,
+    };
 
-    if (data.error) {
-      throw new Error(data.error.message || "Gabim nga OpenAI");
-    }
-
-    const responseText = data.choices?.[0]?.message?.content;
-    if (!responseText) {
-      throw new Error("AI nuk ktheu te dhena te lexueshme.");
-    }
-
-    const extractedData = parseJsonResponse(responseText);
-
-    return NextResponse.json(extractedData);
+    return NextResponse.json(mergedData);
   } catch (error: unknown) {
     console.error("Extraction error:", error);
     const message =
