@@ -115,49 +115,78 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const imageContentBlocks = files.map((file) => ({
-      type: "image_url" as const,
-      image_url: {
-        url: `data:${file.mimeType};base64,${file.buffer.toString("base64")}`,
-      },
-    }));
+    const isMultiPage = files.length > 1;
+    const prompt = `You are an expert invoice OCR and data extraction system for invoices in Albanian or English.
+${
+  isMultiPage
+    ? `CRITICAL MULTI-PAGE INVOICE INSTRUCTION:
+This invoice consists of ${files.length} PAGES / IMAGES provided in sequential order (Page 1 to Page ${files.length}).
+- You MUST scan and extract items from EVERY SINGLE PAGE (Page 1, Page 2, ..., Page ${files.length}).
+- DO NOT extract only the last page! Multi-page invoices have item tables starting on Page 1 and continuing across subsequent pages.
+- You MUST concatenate ALL item rows from ALL pages in sequential order into a single combined 'items' array.
+- Example: If Page 1 has 12 items and Page 2 has 8 items, your final 'items' array MUST contain all 20 items. Skipping Page 1 or any intermediate page is a strict failure.
+- Invoice number, date, and seller fiscal number should be read from Page 1 (header).
+- Total cost ("total_cost") is the final grand total to pay (usually located at the bottom of the last page).`
+    : ""
+}
 
-    const prompt = `
-      Extract information from this invoice. ${files.length > 1 ? `This invoice has ${files.length} pages/images. Combine ALL items from ALL pages into a single result. Do NOT duplicate header info - use the first page for invoice number, date, etc.` : ""}
-      Return ONLY a JSON object with this structure:
+Return ONLY a JSON object with this exact structure:
+{
+  "invoice_num": "string",
+  "date": "YYYY-MM-DD",
+  "total_cost": number,
+  "seller_fiscal_num": "string",
+  "items": [
+    {
+      "item_name": "string",
+      "quantity": number,
+      "unit": "string",
+      "cost_price": number
+    }
+  ]
+}
+
+CRITICAL RULES FOR PRICES AND VAT/TVSH:
+- "total_cost" MUST be the FINAL total amount to pay INCLUDING VAT/TVSH (look for "PËR T'U PAGUAR", "TOTALI", "Gjithsej me TVSH", "Grand Total").
+- Each item on the invoice may have a DIFFERENT VAT/TVSH rate (e.g. 18%, 8%, 0%). You MUST read the actual TVSH rate for EACH item from the invoice. Do NOT assume all items have the same VAT rate.
+- For each item's "cost_price": PREFERRED method is to use the per-item line total INCLUDING VAT (often labeled "SHUMA", "Total", "Amount") DIVIDED by the quantity.
+  Example: if SHUMA=778.80 and quantity=2, then cost_price=389.40
+- FALLBACK: if no line total column exists, read the unit price AND the actual TVSH rate for that specific item, then calculate: cost_price = unit_price * (1 + TVSH_rate/100).
+  Example: unit price=330, that item's TVSH=18%, then cost_price = 330 * 1.18 = 389.40
+  Example: unit price=100, that item's TVSH=8%, then cost_price = 100 * 1.08 = 108.00
+- Do NOT use the base unit price without VAT. The cost_price must ALWAYS include the item's actual VAT/TVSH.
+- The sum of (quantity * cost_price) for all items should approximately equal the total_cost.
+
+OTHER RULES:
+- If a value is not found, use null or empty string.
+- For items, if the unit is not clear, use 'cope'.
+- The language of the invoice might be Albanian or English.
+- Albanian invoices often use: ÇMIMI UN. (unit price without VAT), TVSH (VAT rate per item), SHUMA (line total with VAT).
+- Return ONLY the JSON object, no other text or explanation.`;
+
+    const contentBlocks: Array<
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } }
+    > = [
       {
-        "invoice_num": "string",
-        "date": "YYYY-MM-DD",
-        "total_cost": number,
-        "seller_fiscal_num": "string",
-        "items": [
-          {
-            "item_name": "string",
-            "quantity": number,
-            "unit": "string",
-            "cost_price": number
-          }
-        ]
-      }
+        type: "text",
+        text: prompt,
+      },
+    ];
 
-      CRITICAL RULES FOR PRICES AND VAT/TVSH:
-      - "total_cost" MUST be the FINAL total amount to pay INCLUDING VAT/TVSH (look for "PËR T'U PAGUAR", "Total", "Totali", "Gjithsej" etc.).
-      - Each item on the invoice may have a DIFFERENT VAT/TVSH rate (e.g. 18%, 8%, 0%). You MUST read the actual TVSH rate for EACH item from the invoice. Do NOT assume all items have the same VAT rate.
-      - For each item's "cost_price": PREFERRED method is to use the per-item line total INCLUDING VAT (often labeled "SHUMA", "Total", "Amount") DIVIDED by the quantity.
-        Example: if SHUMA=778.80 and quantity=2, then cost_price=389.40
-      - FALLBACK: if no line total column exists, read the unit price AND the actual TVSH rate for that specific item, then calculate: cost_price = unit_price * (1 + TVSH_rate/100).
-        Example: unit price=330, that item's TVSH=18%, then cost_price = 330 * 1.18 = 389.40
-        Example: unit price=100, that item's TVSH=8%, then cost_price = 100 * 1.08 = 108.00
-      - Do NOT use the base unit price without VAT. The cost_price must ALWAYS include the item's actual VAT/TVSH.
-      - The sum of (quantity * cost_price) for all items should approximately equal the total_cost.
-
-      OTHER RULES:
-      - If a value is not found, use null or empty string.
-      - For items, if the unit is not clear, use 'cope'.
-      - The language of the invoice might be Albanian or English.
-      - Albanian invoices often use: ÇMIMI UN. (unit price without VAT), TVSH (VAT rate per item), SHUMA (line total with VAT).
-      - Return ONLY the JSON object, no other text.
-    `;
+    files.forEach((file, index) => {
+      contentBlocks.push({
+        type: "text",
+        text: `\n=== INVOICE PAGE ${index + 1} OF ${files.length} ===\n(Extract all item rows from this page and merge with other pages)`,
+      });
+      contentBlocks.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${file.mimeType};base64,${file.buffer.toString("base64")}`,
+          detail: "high",
+        },
+      });
+    });
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -170,13 +199,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "user",
-            content: [
-              {
-                type: "text",
-                text: prompt,
-              },
-              ...imageContentBlocks,
-            ],
+            content: contentBlocks,
           },
         ],
         response_format: { type: "json_object" },

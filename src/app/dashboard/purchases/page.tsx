@@ -183,6 +183,58 @@ export default function PurchasesPage() {
     setInvoicePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const processAiExtraction = async (filesToExtract: File[]) => {
+    if (filesToExtract.length === 0) return
+
+    setIsExtracting(true)
+    try {
+      const formData = new FormData()
+      for (const file of filesToExtract) {
+        formData.append("files", file)
+      }
+
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = (await response.json().catch(() => null)) as ExtractedInvoice | null
+      if (!response.ok) {
+        throw new Error(data?.error || "AI Extraction failed")
+      }
+
+      if (!data) {
+        throw new Error("AI nuk ktheu të dhëna të lexueshme.")
+      }
+
+      if (data.invoice_num) form.setValue("invoice_num", data.invoice_num)
+      if (data.date) form.setValue("date", data.date)
+      if (data.seller_fiscal_num) form.setValue("seller_fiscal_num", data.seller_fiscal_num)
+      const extractedTotal = Number(data.total_cost ?? data.total_amount)
+      if (!Number.isNaN(extractedTotal) && extractedTotal > 0) {
+        form.setValue("total_cost", extractedTotal)
+      }
+
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        form.setValue(
+          "items",
+          data.items.map((item) => ({
+            item_name: item.item_name || item.description || "",
+            quantity: Number(item.quantity) || 1,
+            unit: item.unit || "cope",
+            cost_price: Number(item.cost_price || item.price) || 0,
+          }))
+        )
+      }
+
+      toast.success(`U ekstratuan me sukses të gjitha të dhënat nga ${filesToExtract.length} faqe!`)
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI Extraction failed")
+    } finally {
+      setIsExtracting(false)
+    }
+  }
+
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || [])
     if (selectedFiles.length === 0) return
@@ -197,69 +249,28 @@ export default function PurchasesPage() {
     }
 
     if (validFiles.length === 0) return
-    if (validFiles.length > 10) {
+
+    const updatedFiles = [...invoiceFiles, ...validFiles]
+    if (updatedFiles.length > 10) {
       toast.error("Maksimumi i fotove është 10")
       return
     }
 
-    // Also set as invoice files for saving
-    setInvoiceFiles(validFiles)
-    const previews: string[] = []
+    const newPreviews: string[] = []
     for (const file of validFiles) {
       const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader()
         reader.onload = (e) => resolve(e.target?.result as string)
         reader.readAsDataURL(file)
       })
-      previews.push(dataUrl)
+      newPreviews.push(dataUrl)
     }
-    setInvoicePreviews(previews)
 
-    setIsExtracting(true)
-    try {
-      const formData = new FormData()
-      for (const file of validFiles) {
-        formData.append("files", file)
-      }
+    setInvoiceFiles(updatedFiles)
+    setInvoicePreviews((prev) => [...prev, ...newPreviews])
+    event.target.value = ""
 
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        body: formData,
-      })
-
-      const data = await response.json().catch(() => null) as ExtractedInvoice | null
-      if (!response.ok) {
-        throw new Error(data?.error || "AI Extraction failed")
-      }
-
-      if (!data) {
-        throw new Error("AI nuk ktheu te dhena te lexueshme.")
-      }
-
-      if (data.invoice_num) form.setValue("invoice_num", data.invoice_num)
-      if (data.date) form.setValue("date", data.date)
-      if (data.seller_fiscal_num) form.setValue("seller_fiscal_num", data.seller_fiscal_num)
-      const extractedTotal = Number(data.total_cost ?? data.total_amount)
-      if (!Number.isNaN(extractedTotal) && extractedTotal > 0) {
-        form.setValue("total_cost", extractedTotal)
-      }
-
-      if (Array.isArray(data.items) && data.items.length > 0) {
-        form.setValue("items", data.items.map((item) => ({
-          item_name: item.item_name || item.description || "",
-          quantity: Number(item.quantity) || 1,
-          unit: item.unit || "cope",
-          cost_price: Number(item.cost_price || item.price) || 0,
-        })))
-      }
-
-      toast.success(`AI Extraction Success! (${validFiles.length} foto)`)
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "AI Extraction failed")
-    } finally {
-      setIsExtracting(false)
-      event.target.value = ""
-    }
+    await processAiExtraction(updatedFiles)
   }
 
   const handleFormSubmit = async (values: PurchaseFormValues) => {
@@ -377,29 +388,71 @@ export default function PurchasesPage() {
 
               {/* Multi-image previews for AI extraction */}
               {invoicePreviews.length > 0 && (
-                <div className="flex flex-wrap gap-3 mt-4">
-                  {invoicePreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <button
-                        type="button"
-                        onClick={() => removeInvoiceImage(index)}
-                        className="absolute -top-2 -right-2 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                      <div className="relative">
-                        <img
-                          src={preview}
-                          alt={`Faqja ${index + 1}`}
-                          className="h-20 w-20 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
-                          onClick={() => window.open(preview, '_blank')}
-                        />
-                        <span className="absolute bottom-1 right-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                          {index + 1}
-                        </span>
+                <div className="space-y-3 mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                    <span>Faqet e ngarkuara ({invoicePreviews.length})</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInvoiceFiles([])
+                        setInvoicePreviews([])
+                      }}
+                      className="text-destructive hover:underline text-xs"
+                      disabled={isExtracting}
+                    >
+                      Pastro të gjitha
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {invoicePreviews.map((preview, index) => (
+                      <div key={index} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => removeInvoiceImage(index)}
+                          className="absolute -top-2 -right-2 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={isExtracting}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <div className="relative">
+                          <img
+                            src={preview}
+                            alt={`Faqja ${index + 1}`}
+                            className="h-20 w-20 object-cover rounded-xl border-2 border-primary/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => window.open(preview, '_blank')}
+                          />
+                          <span className="absolute bottom-1 right-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow">
+                            Faqja {index + 1}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                    {invoicePreviews.length < 10 && (
+                      <label className="flex flex-col items-center justify-center h-20 w-20 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer text-primary">
+                        <Plus className="w-5 h-5 mb-1" />
+                        <span className="text-[10px] font-bold">+ Faqe</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleFileUpload}
+                          disabled={isExtracting}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 font-bold text-xs"
+                    onClick={() => processAiExtraction(invoiceFiles)}
+                    disabled={isExtracting || invoiceFiles.length === 0}
+                  >
+                    {isExtracting ? <Spinner className="w-4 h-4 mr-2" /> : <FileUp className="w-4 h-4 mr-2 text-primary" />}
+                    {isExtracting ? t("processing") : `Riekstrato të gjitha (${invoiceFiles.length} faqe)`}
+                  </Button>
                 </div>
               )}
             </CardContent>
