@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { useForm, useFieldArray } from "react-hook-form"
+import { useForm, useFieldArray, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -106,9 +106,9 @@ export default function PurchasesPage() {
     items: z
       .array(
         z.object({
-          item_name: z.string().trim().min(1, t("val_item_required")).max(120, "Too long"),
+          item_name: z.string().trim().min(1, t("val_item_required")).max(255, "Too long"),
           quantity: z.coerce.number().gt(0, t("val_qty_gt_zero")),
-          unit: z.string().trim().min(1, t("val_unit_required")).max(20, "Too long"),
+          unit: z.string().trim().min(1, t("val_unit_required")).max(50, "Too long"),
           cost_price: z.coerce.number().min(0, t("val_vat_negative")),
         })
       )
@@ -137,9 +137,10 @@ export default function PurchasesPage() {
   const watchedItems = form.watch("items")
   
   useEffect(() => {
+    if (!watchedItems || watchedItems.length === 0) return
     const total = watchedItems.reduce((acc, item) => {
-      const qty = Number(item.quantity) || 0
-      const price = Number(item.cost_price) || 0
+      const qty = Number(item?.quantity) || 0
+      const price = Number(item?.cost_price) || 0
       return acc + (qty * price)
     }, 0)
     form.setValue("total_cost", parseFloat(total.toFixed(2)), { shouldValidate: true })
@@ -273,6 +274,48 @@ export default function PurchasesPage() {
     await processAiExtraction(updatedFiles)
   }
 
+  const onFormError = (errors: FieldErrors<PurchaseFormValues>) => {
+    console.warn("Form validation errors:", errors)
+    if (errors.invoice_num) {
+      toast.error(errors.invoice_num.message || "Numri i faturës është i detyrueshëm")
+      return
+    }
+    if (errors.date) {
+      toast.error(errors.date.message || "Data është e detyrueshme")
+      return
+    }
+    if (errors.total_cost) {
+      toast.error(errors.total_cost.message || "Totali duhet të jetë më i madh se 0")
+      return
+    }
+    if (errors.items) {
+      if (errors.items.root?.message) {
+        toast.error(errors.items.root.message)
+        return
+      }
+      if (Array.isArray(errors.items)) {
+        for (let i = 0; i < errors.items.length; i++) {
+          const itemErr = errors.items[i]
+          if (itemErr) {
+            if (itemErr.item_name) {
+              toast.error(`Artikulli #${i + 1}: Emri është i detyrueshëm`)
+              return
+            }
+            if (itemErr.quantity) {
+              toast.error(`Artikulli #${i + 1}: Sasia duhet të jetë më e madhe se 0`)
+              return
+            }
+            if (itemErr.cost_price) {
+              toast.error(`Artikulli #${i + 1}: Çmimi nuk mund të jetë negativ`)
+              return
+            }
+          }
+        }
+      }
+      toast.error("Ju lutem kontrolloni artikujt e faturës")
+    }
+  }
+
   const handleFormSubmit = async (values: PurchaseFormValues) => {
     setIsLoading(true)
     setFormError("")
@@ -300,10 +343,10 @@ export default function PurchasesPage() {
       }
 
       const { data: purchaseData, error: purchaseError } = await supabase.from("purchases").insert({
-        invoice_num: values.invoice_num,
+        invoice_num: values.invoice_num.trim(),
         date: values.date,
-        total_cost: values.total_cost,
-        seller_fiscal_num: values.seller_fiscal_num,
+        total_cost: Number(values.total_cost),
+        seller_fiscal_num: values.seller_fiscal_num?.trim() || null,
         image_url: imageUrl,
         user_id: user.id,
       }).select().single()
@@ -312,10 +355,10 @@ export default function PurchasesPage() {
 
       const purchaseItemsToInsert = values.items.map(item => ({
         purchase_id: purchaseData.id,
-        item_name: item.item_name,
-        quantity: item.quantity,
-        cost_price: item.cost_price,
-        unit: item.unit,
+        item_name: item.item_name.trim(),
+        quantity: Number(item.quantity) || 1,
+        cost_price: Number(item.cost_price) || 0,
+        unit: item.unit?.trim() || "cope",
         user_id: user.id
       }))
 
@@ -324,14 +367,14 @@ export default function PurchasesPage() {
 
       for (const item of values.items) {
         await StockService.updateStock(
-          item.item_name,
-          item.quantity,
-          item.unit,
+          item.item_name.trim(),
+          Number(item.quantity) || 1,
+          item.unit?.trim() || "cope",
           user.id
         )
       }
 
-      toast.success(t("auth.success_login"))
+      toast.success("Blerja u regjistrua me sukses!")
       form.reset({
         invoice_num: "",
         date: new Date().toISOString().split("T")[0],
@@ -342,7 +385,10 @@ export default function PurchasesPage() {
       setInvoiceFiles([])
       setInvoicePreviews([])
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Purchase registration failed")
+      console.error("Error submitting purchase:", error)
+      const msg = error instanceof Error ? error.message : "Dështoi regjistrimi i blerjes"
+      setFormError(msg)
+      toast.error(msg)
     } finally {
       setIsLoading(false)
     }
@@ -506,7 +552,7 @@ export default function PurchasesPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+              <form onSubmit={form.handleSubmit(handleFormSubmit, onFormError)} className="space-y-8">
                 {formError && (
                   <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2 animate-in slide-in-from-top-2">
                     <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -548,7 +594,7 @@ export default function PurchasesPage() {
                       <FormItem>
                         <FormLabel className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">{t("seller_fiscal")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="600xxxxxx" {...field} className="h-11 bg-background/50" />
+                          <Input placeholder="600xxxxxx" {...field} value={field.value || ""} className="h-11 bg-background/50" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
