@@ -54,33 +54,44 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // 3. MBROJTJA: Nëse s'ka user dhe tenton Dashboard, dërgoje në Login
-  if (!user && isProtectedRoute) {
+  const workerSessionCookie = request.cookies.get('worker_session')?.value
+  const hasWorkerSession = !!workerSessionCookie
+
+  // 3. MBROJTJA: Nëse s'ka user ose worker_session dhe tenton Dashboard, dërgoje në Login
+  if (!user && !hasWorkerSession && isProtectedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // 4. PAS LOGINIT: Nëse ka user dhe tenton Login/Register, dërgoje në Dashboard
+  // 4. PAS LOGINIT: Nëse ka user ose worker_session dhe tenton Login/Register, dërgoje në Dashboard
   // POR: Mos e blloko nëse është duke ndryshuar fjalëkalimin (update-password)
-  if (user && isAuthFormRoute && !isUpdatePasswordRoute) {
+  if ((user || hasWorkerSession) && isAuthFormRoute && !isUpdatePasswordRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
   // 5. ROLE-BASED ACCESS (ADMIN)
-  if (user && pathname.startsWith('/admin')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
+  if ((user || hasWorkerSession) && pathname.startsWith('/admin')) {
+    if (hasWorkerSession && !user) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
+    }
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role !== 'admin') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
     }
   }
 

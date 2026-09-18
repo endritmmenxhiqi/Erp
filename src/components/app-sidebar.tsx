@@ -85,6 +85,8 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
   const handleSignOut = async () => {
     if (worker) {
       StaffService.setCurrentWorker(null)
+      // Clear worker_session cookie
+      document.cookie = 'worker_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       router.push("/login")
     } else {
       await signOutAction()

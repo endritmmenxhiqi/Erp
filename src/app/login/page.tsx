@@ -86,8 +86,17 @@ function LoginForm() {
         return
       }
 
-      const { worker } = result
+      const { worker, session } = result
       StaffService.setCurrentWorker(worker)
+
+      // If session tokens were generated, set the Supabase session
+      // This enables RLS-protected queries to work for the worker
+      if (session?.access_token && session?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        })
+      }
 
       // Start shift automatically
       try {

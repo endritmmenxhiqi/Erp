@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChatDB } from "@/components/ChatDB"
 import { ImpersonationBanner } from "@/components/impersonation-banner"
@@ -17,36 +18,64 @@ export default async function DashboardLayout({
     } = await supabase.auth.getUser()
     user = u
   } catch (err) {
-    // If fetch fails or auth call errors, redirect to login
-    // so the app doesn't crash with an unhandled error in auth-js
-    // and surface a clearer message in server logs.
-    // eslint-disable-next-line no-console
+    // If fetch fails or auth call errors, check for worker session before redirecting
     console.error('Supabase auth.getUser error:', err)
+  }
+
+  // Check for worker session cookie
+  const cookieStore = await cookies()
+  const workerSessionCookie = cookieStore.get('worker_session')?.value
+  let workerSession: any = null
+  if (workerSessionCookie) {
+    try {
+      workerSession = JSON.parse(workerSessionCookie)
+    } catch {
+      workerSession = null
+    }
+  }
+
+  // If neither Supabase user nor worker session, redirect to login
+  if (!user && !workerSession) {
     return redirect('/login')
   }
 
-  if (!user) {
-    return redirect('/login')
-  }
+  let profile: any = null
+  let email = ''
+  let role = 'user'
+  let aiEnabled = false
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, ai_enabled')
-    .eq('id', user.id)
-    .single()
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role, ai_enabled')
+      .eq('id', user.id)
+      .single()
+    profile = data
+    email = user.email || ''
+    role = profile?.role || 'user'
+    aiEnabled = profile?.ai_enabled || false
+  } else if (workerSession) {
+    // Worker session - use worker info
+    email = `${workerSession.first_name} ${workerSession.last_name}`
+    role = workerSession.role || 'seller'
+    aiEnabled = false
+  }
 
   const signOut = async () => {
     "use server";
     const supabase = await createClient();
     await supabase.auth.signOut();
+    // Clear worker session cookie
+    const cookieStore = await cookies();
+    cookieStore.delete('worker_session');
     return redirect("/login");
   };
 
   return (
     <div className="flex min-h-screen bg-background print:block print:bg-white print:min-h-0 print:h-auto">
       <AppSidebar 
-        email={user.email!} 
-        role={profile?.role || 'user'} 
+        email={email} 
+        role={role} 
         signOutAction={signOut} 
       />
       <main className="flex-1 overflow-y-auto print:overflow-visible print:p-0">
@@ -60,12 +89,11 @@ export default async function DashboardLayout({
         `}} />
         <div className="p-8 sm:p-12 max-w-7xl mx-auto print:p-0 print:max-w-none">
           <div className="hidden print:block print-padding">
-            {/* This will wrap children only in print if we use a specific class, 
-                but let's just apply it directly to children's container */}
+            {/* Print wrapper */}
           </div>
           {children}
         </div>
-        {profile?.ai_enabled && (
+        {aiEnabled && (
           <div className="print:hidden">
             <ChatDB />
           </div>

@@ -124,7 +124,7 @@ export const StaffService = {
     if (error) throw error
   },
 
-  workerLogin: async (usernameOrName: string, password: string): Promise<{ worker: Worker; businessEmail?: string } | null> => {
+  workerLogin: async (usernameOrName: string, password: string): Promise<{ worker: Worker; businessEmail?: string; session?: { access_token: string; refresh_token: string } } | null> => {
     const res = await fetch("/api/auth/worker-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -143,6 +143,7 @@ export const StaffService = {
     return {
       worker: result.worker,
       businessEmail: result.businessEmail,
+      session: result.session || undefined,
     }
   },
 
