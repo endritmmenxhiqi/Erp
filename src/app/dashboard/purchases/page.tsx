@@ -16,6 +16,7 @@ import { Spinner } from "@/components/spinner"
 import { AlertCircle, FileUp, Plus, Save, Trash2, Package, X, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StockService } from "@/lib/services/stock"
+import { StaffService } from "@/lib/services/staff"
 
 import { MAX_INVOICE_LENGTH, MAX_ITEMS, MAX_FILE_SIZE } from "@/lib/constants"
 
