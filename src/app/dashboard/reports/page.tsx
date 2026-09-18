@@ -163,7 +163,7 @@ export default function ReportsPage() {
         
         {/* Filters and Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Select value={selectedWorkerId} onValueChange={setSelectedWorkerId}>
+          <Select value={selectedWorkerId} onValueChange={(v) => setSelectedWorkerId(v ?? "all")}>
             <SelectTrigger className="w-full sm:w-[200px] h-11 glass border-border shadow-sm">
               <Users className="w-4 h-4 mr-2 text-primary" />
               <SelectValue placeholder={t("select_worker")} />
@@ -178,7 +178,7 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
           
-          <Select value={dateRange} onValueChange={(v: DateRange) => setDateRange(v)}>
+          <Select value={dateRange} onValueChange={(v) => setDateRange((v ?? "this_week") as DateRange)}>
             <SelectTrigger className="w-full sm:w-[180px] h-11 glass border-border shadow-sm">
               <Calendar className="w-4 h-4 mr-2 text-primary" />
               <SelectValue placeholder="Periudha" />
