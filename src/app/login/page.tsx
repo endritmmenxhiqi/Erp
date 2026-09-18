@@ -2,31 +2,17 @@
 
 import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Spinner } from "@/components/spinner"
 import Link from "next/link"
-import { ChevronRight, Rocket, AlertCircle, Building2, UserCircle, Briefcase } from "lucide-react"
+import { ChevronRight, Rocket, AlertCircle, Building2, UserCircle } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useTranslation } from "@/components/language-provider"
 import { StaffService } from "@/lib/services/staff"
-
-const businessLoginSchema = z.object({
-  fiscal_number: z.string().min(9).max(10).regex(/^[a-zA-Z0-9]+$/),
-  password: z.string().min(6),
-})
-
-const workerLoginSchema = z.object({
-  username: z.string().min(2, "Shkruani emrin ose username-in"),
-  password: z.string().min(1, "Fjalëkalimi është i detyrueshëm"),
-})
 
 function LoginForm() {
   const [loginType, setLoginType] = useState<"business" | "worker">("business")
@@ -37,24 +23,28 @@ function LoginForm() {
   const supabase = createClient()
   const { t } = useTranslation()
 
-  const businessForm = useForm<z.infer<typeof businessLoginSchema>>({
-    resolver: zodResolver(businessLoginSchema),
-    defaultValues: { fiscal_number: "", password: "" },
-  })
+  // Business Login State
+  const [fiscalNumber, setFiscalNumber] = useState("")
+  const [businessPassword, setBusinessPassword] = useState("")
 
-  const workerForm = useForm<z.infer<typeof workerLoginSchema>>({
-    resolver: zodResolver(workerLoginSchema),
-    defaultValues: { username: "", password: "" },
-  })
+  // Worker Login State
+  const [workerUsername, setWorkerUsername] = useState("")
+  const [workerPassword, setWorkerPassword] = useState("")
 
-  async function onBusinessSubmit(values: z.infer<typeof businessLoginSchema>) {
+  async function handleBusinessSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!fiscalNumber.trim() || !businessPassword.trim()) {
+      toast.error("Ju lutem plotësoni numrin fiskal dhe fjalëkalimin.")
+      return
+    }
+
     setIsLoading(true)
     try {
       StaffService.setCurrentWorker(null) // Clear any previous worker session
       const { data: profile, error: fetchError } = await supabase
         .from('profiles')
         .select('email, role')
-        .eq('fiscal_number', values.fiscal_number)
+        .eq('fiscal_number', fiscalNumber.trim())
         .single()
 
       if (fetchError || !profile) {
@@ -64,7 +54,7 @@ function LoginForm() {
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: profile.email,
-        password: values.password,
+        password: businessPassword,
       })
 
       if (signInError) {
@@ -81,10 +71,16 @@ function LoginForm() {
     }
   }
 
-  async function onWorkerSubmit(values: z.infer<typeof workerLoginSchema>) {
+  async function handleWorkerSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!workerUsername.trim() || !workerPassword.trim()) {
+      toast.error("Ju lutem plotësoni përdoruesin dhe fjalëkalimin.")
+      return
+    }
+
     setIsLoading(true)
     try {
-      const result = await StaffService.workerLogin(values.username, values.password)
+      const result = await StaffService.workerLogin(workerUsername.trim(), workerPassword.trim())
       if (!result || !result.worker) {
         toast.error("Të dhënat e punëtorit nuk janë të sakta.")
         return
@@ -93,7 +89,7 @@ function LoginForm() {
       const { worker } = result
       StaffService.setCurrentWorker(worker)
 
-      // Start the shift automatically
+      // Start shift automatically
       try {
         await StaffService.clockIn(worker.id)
       } catch (e) {
@@ -177,104 +173,84 @@ function LoginForm() {
           )}
 
           {loginType === "business" ? (
-            <Form {...businessForm}>
-              <form onSubmit={businessForm.handleSubmit(onBusinessSubmit)} className="space-y-5">
-                <FormField
-                  control={businessForm.control}
-                  name="fiscal_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("fiscal_number")}</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Psh. 600123456" 
-                          className="h-12 bg-background/50 border-border focus:ring-primary/20" 
-                          disabled={isLoading} 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <form onSubmit={handleBusinessSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">{t("fiscal_number")}</label>
+                <Input 
+                  type="text"
+                  placeholder="Psh. 600123456" 
+                  className="h-12 bg-background/50 border-border focus:ring-primary/20" 
+                  disabled={isLoading} 
+                  value={fiscalNumber}
+                  onChange={(e) => setFiscalNumber(e.target.value)}
+                  autoComplete="username"
+                  required
                 />
-                <FormField
-                  control={businessForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("password")}</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="••••••••" 
-                          className="h-12 bg-background/50 border-border focus:ring-primary/20" 
-                          disabled={isLoading} 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <div className="flex justify-end pt-1">
-                        <Link href="/forgot-password" className="text-xs text-primary hover:underline underline-offset-4 font-medium">
-                          {t("forgot_password")}
-                        </Link>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">{t("password")}</label>
+                  <Link href="/forgot-password" className="text-xs text-primary hover:underline underline-offset-4 font-medium">
+                    {t("forgot_password")}
+                  </Link>
+                </div>
+                <Input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  className="h-12 bg-background/50 border-border focus:ring-primary/20" 
+                  disabled={isLoading} 
+                  value={businessPassword}
+                  onChange={(e) => setBusinessPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
                 />
-                
-                <Button type="submit" className="w-full h-12 text-md font-bold primary-gradient mt-4 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all" disabled={isLoading}>
-                  {isLoading ? <Spinner className="mr-2" /> : t("continue")}
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </form>
-            </Form>
+              </div>
+              
+              <Button type="submit" className="w-full h-12 text-md font-bold primary-gradient mt-4 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all" disabled={isLoading}>
+                {isLoading ? <Spinner className="mr-2" /> : t("continue")}
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </form>
           ) : (
-            <Form {...workerForm}>
-              <form onSubmit={workerForm.handleSubmit(onWorkerSubmit)} className="space-y-5">
-                <FormField
-                  control={workerForm.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("username")} ose Emri & Mbiemri</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Psh. agoni ose Agon Krasniqi" 
-                          className="h-12 bg-background/50 border-border focus:ring-primary/20" 
-                          disabled={isLoading} 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <form onSubmit={handleWorkerSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">
+                  {t("username")} ose Emri & Mbiemri
+                </label>
+                <Input 
+                  type="text"
+                  placeholder="Psh. agoni ose Agon Krasniqi" 
+                  className="h-12 bg-background/50 border-border focus:ring-primary/20" 
+                  disabled={isLoading} 
+                  value={workerUsername}
+                  onChange={(e) => setWorkerUsername(e.target.value)}
+                  autoComplete="username"
+                  required
                 />
-                <FormField
-                  control={workerForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("password")}</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="Fjalëkalimi i caktuar nga admini" 
-                          className="h-12 bg-background/50 border-border focus:ring-primary/20" 
-                          disabled={isLoading} 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">
+                  {t("password")}
+                </label>
+                <Input 
+                  type="password" 
+                  placeholder="Fjalëkalimi i caktuar nga admini" 
+                  className="h-12 bg-background/50 border-border focus:ring-primary/20" 
+                  disabled={isLoading} 
+                  value={workerPassword}
+                  onChange={(e) => setWorkerPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
                 />
-                
-                <Button type="submit" className="w-full h-12 text-md font-bold primary-gradient mt-4 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all" disabled={isLoading}>
-                  {isLoading ? <Spinner className="mr-2" /> : "Kyçu si Punëtor"}
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </form>
-            </Form>
+              </div>
+              
+              <Button type="submit" className="w-full h-12 text-md font-bold primary-gradient mt-4 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all" disabled={isLoading}>
+                {isLoading ? <Spinner className="mr-2" /> : "Kyçu si Punëtor"}
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </form>
           )}
         </div>
 
