@@ -1,5 +1,6 @@
 "use client"
 
+// Production build version 1.0.2
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useTranslation } from "@/components/language-provider"
 import { createClient } from "@/utils/supabase/client"
