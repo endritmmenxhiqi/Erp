@@ -58,7 +58,16 @@ export default async function DashboardLayout({
     // Worker session - use worker info
     email = `${workerSession.first_name} ${workerSession.last_name}`
     role = workerSession.role || 'seller'
-    aiEnabled = false
+    if (workerSession.business_id) {
+      const { data: bProfile } = await supabase
+        .from('profiles')
+        .select('ai_enabled')
+        .eq('id', workerSession.business_id)
+        .single()
+      aiEnabled = bProfile?.ai_enabled ?? (role === 'commercialist')
+    } else {
+      aiEnabled = role === 'commercialist'
+    }
   }
 
   const signOut = async () => {

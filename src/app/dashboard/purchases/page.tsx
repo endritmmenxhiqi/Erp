@@ -16,12 +16,13 @@ import { Spinner } from "@/components/spinner"
 import { AlertCircle, FileUp, Plus, Save, Trash2, Package, X, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StockService } from "@/lib/services/stock"
-import { StaffService } from "@/lib/services/staff"
+import { StaffService, type Worker } from "@/lib/services/staff"
 
 import { MAX_INVOICE_LENGTH, MAX_ITEMS, MAX_FILE_SIZE } from "@/lib/constants"
 
 type Profile = {
   ai_enabled?: boolean | null
+  business_name?: string | null
 }
 
 type ExtractedItem = {
@@ -58,19 +59,30 @@ export default function PurchasesPage() {
   const [isExtracting, setIsExtracting] = useState(false)
   const [formError, setFormError] = useState("")
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [currentWorker, setCurrentWorker] = useState<Worker | null>(null)
   const [supabase] = useState(() => createClient())
   const [invoiceFiles, setInvoiceFiles] = useState<File[]>([])
   const [invoicePreviews, setInvoicePreviews] = useState<string[]>([])
 
   useEffect(() => {
+    setCurrentWorker(StaffService.getCurrentWorker())
+  }, [])
+
+  useEffect(() => {
     async function fetchProfile() {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
-        if (error) throw error
+        const businessId = await StaffService.getEffectiveBusinessId(supabase)
+        if (businessId) {
+          const { data } = await supabase.from("profiles").select("*").eq("id", businessId).single()
+          if (data) setProfile(data)
+        } else {
+          const { data: { user }, error } = await supabase.auth.getUser()
+          if (error) throw error
 
-        if (user) {
-          const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-          setProfile(data)
+          if (user) {
+            const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+            if (data) setProfile(data)
+          }
         }
       } catch (error: unknown) {
         if (isExpiredSessionError(error)) {
@@ -81,6 +93,12 @@ export default function PurchasesPage() {
     }
     fetchProfile()
   }, [supabase])
+
+  const isAiExtractVisible = Boolean(
+    profile?.ai_enabled || 
+    currentWorker?.role === 'commercialist' ||
+    (profile && profile.ai_enabled !== false)
+  )
 
   async function getCurrentUser(): Promise<User> {
     const { data: { user }, error } = await supabase.auth.getUser()
@@ -321,9 +339,16 @@ export default function PurchasesPage() {
     setIsLoading(true)
     setFormError("")
     try {
-      const user = await getCurrentUser()
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (!businessId) {
+        const user = await getCurrentUser()
+        if (!user) throw new Error("Nuk keni sesion aktiv të biznesit.")
+      }
 
-      const businessId = await StaffService.getEffectiveBusinessId(supabase) || user.id
+      const effectiveId = businessId || (await supabase.auth.getUser()).data.user?.id
+      if (!effectiveId) {
+        throw new Error("Nuk keni sesion aktiv të biznesit.")
+      }
 
       // Upload invoice images if present
       let imageUrl: string | null = null
@@ -332,7 +357,7 @@ export default function PurchasesPage() {
         for (let i = 0; i < invoiceFiles.length; i++) {
           const file = invoiceFiles[i]
           const ext = file.name.split('.').pop() || 'jpg'
-          const filePath = `${businessId}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${i}.${ext}`
+          const filePath = `${effectiveId}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${i}.${ext}`
           const { error: uploadError } = await supabase.storage
             .from('invoices')
             .upload(filePath, file, { upsert: true })
@@ -345,13 +370,19 @@ export default function PurchasesPage() {
         imageUrl = uploadedUrls.length > 0 ? uploadedUrls.join(',') : null
       }
 
+      const workerName = currentWorker 
+        ? `${currentWorker.first_name} ${currentWorker.last_name}` 
+        : (profile?.business_name || "Admin")
+
       const { data: purchaseData, error: purchaseError } = await supabase.from("purchases").insert({
         invoice_num: values.invoice_num.trim(),
         date: values.date,
         total_cost: Number(values.total_cost),
         seller_fiscal_num: values.seller_fiscal_num?.trim() || null,
         image_url: imageUrl,
-        user_id: businessId,
+        user_id: effectiveId,
+        worker_id: currentWorker?.id || null,
+        worker_name: workerName,
       }).select().single()
 
       if (purchaseError) throw purchaseError
@@ -362,7 +393,7 @@ export default function PurchasesPage() {
         quantity: Number(item.quantity) || 1,
         cost_price: Number(item.cost_price) || 0,
         unit: item.unit?.trim() || "cope",
-        user_id: businessId
+        user_id: effectiveId
       }))
 
       const { error: itemsError } = await supabase.from("purchase_items").insert(purchaseItemsToInsert)
@@ -373,7 +404,7 @@ export default function PurchasesPage() {
           item.item_name.trim(),
           Number(item.quantity) || 1,
           item.unit?.trim() || "cope",
-          businessId
+          effectiveId
         )
       }
 
@@ -404,8 +435,8 @@ export default function PurchasesPage() {
         <p className="text-muted-foreground">{t("dashboard_desc")}</p>
       </div>
 
-      <div className={cn("grid gap-8", profile?.ai_enabled ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1")}>
-        {profile?.ai_enabled && (
+      <div className={cn("grid gap-8", isAiExtractVisible ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1")}>
+        {isAiExtractVisible && (
           <Card className="lg:col-span-1 glass border-border shadow-xl hover:shadow-2xl transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center text-xl">
@@ -508,7 +539,7 @@ export default function PurchasesPage() {
           </Card>
         )}
 
-        <Card className={cn("glass border-border shadow-xl", profile?.ai_enabled ? "lg:col-span-2" : "w-full")}>
+        <Card className={cn("glass border-border shadow-xl", isAiExtractVisible ? "lg:col-span-2" : "w-full")}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center text-xl">
