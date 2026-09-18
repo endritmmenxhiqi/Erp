@@ -32,6 +32,9 @@ export const StaffService = {
     if (typeof window !== "undefined") {
       const impersonatedId = sessionStorage.getItem("impersonated_business_id") || localStorage.getItem("impersonated_business_id")
       if (impersonatedId) return impersonatedId
+      
+      const worker = StaffService.getCurrentWorker()
+      if (worker && worker.business_id) return worker.business_id
     }
     const { data: { user } } = await supabase.auth.getUser()
     return user ? user.id : null

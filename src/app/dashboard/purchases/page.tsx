@@ -322,6 +322,8 @@ export default function PurchasesPage() {
     try {
       const user = await getCurrentUser()
 
+      const businessId = await StaffService.getEffectiveBusinessId(supabase) || user.id
+
       // Upload invoice images if present
       let imageUrl: string | null = null
       if (invoiceFiles.length > 0) {
@@ -329,7 +331,7 @@ export default function PurchasesPage() {
         for (let i = 0; i < invoiceFiles.length; i++) {
           const file = invoiceFiles[i]
           const ext = file.name.split('.').pop() || 'jpg'
-          const filePath = `${user.id}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${i}.${ext}`
+          const filePath = `${businessId}/${values.invoice_num.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${i}.${ext}`
           const { error: uploadError } = await supabase.storage
             .from('invoices')
             .upload(filePath, file, { upsert: true })
@@ -348,7 +350,7 @@ export default function PurchasesPage() {
         total_cost: Number(values.total_cost),
         seller_fiscal_num: values.seller_fiscal_num?.trim() || null,
         image_url: imageUrl,
-        user_id: user.id,
+        user_id: businessId,
       }).select().single()
 
       if (purchaseError) throw purchaseError
@@ -359,7 +361,7 @@ export default function PurchasesPage() {
         quantity: Number(item.quantity) || 1,
         cost_price: Number(item.cost_price) || 0,
         unit: item.unit?.trim() || "cope",
-        user_id: user.id
+        user_id: businessId
       }))
 
       const { error: itemsError } = await supabase.from("purchase_items").insert(purchaseItemsToInsert)
@@ -370,7 +372,7 @@ export default function PurchasesPage() {
           item.item_name.trim(),
           Number(item.quantity) || 1,
           item.unit?.trim() || "cope",
-          user.id
+          businessId
         )
       }
 

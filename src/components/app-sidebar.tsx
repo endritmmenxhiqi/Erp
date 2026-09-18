@@ -77,7 +77,8 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
       { name: t("sales"), href: "/dashboard/sales", icon: Users },
       { name: t("sales_book"), href: "/dashboard/sales-book", icon: FileText },
       { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
-      { name: t("products"), href: "/dashboard/products", icon: Rocket },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+      { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
       { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
     ]
   }

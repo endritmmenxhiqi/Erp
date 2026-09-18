@@ -305,7 +305,7 @@ export default function SalesPage() {
             item.item_name,
             -item.quantity,
             item.unit,
-            user.id
+            businessId
           )
         }
       }

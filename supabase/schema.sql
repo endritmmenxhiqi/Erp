@@ -9,8 +9,7 @@ create table public.sales (
   total_amount decimal(12,2) not null,
   vat_rate decimal(5,2) default 0,
   type text check (type in ('Mall', 'Shërbim')) default 'Mall',
-  user_id uuid references auth.users on delete cascade not null,
-  unique(invoice_num, user_id)
+  user_id uuid references auth.users on delete cascade not null
 );
 
 -- Create Purchases table
@@ -21,8 +20,7 @@ create table public.purchases (
   total_cost decimal(12,2) not null,
   seller_fiscal_num text,
   image_url text,
-  user_id uuid references auth.users on delete cascade not null,
-  unique(invoice_num, user_id)
+  user_id uuid references auth.users on delete cascade not null
 );
 
 -- Create Stock table
