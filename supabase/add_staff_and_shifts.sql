@@ -72,3 +72,51 @@ CREATE POLICY "Users can insert own shifts" ON public.worker_shifts
 
 CREATE POLICY "Users can update own shifts" ON public.worker_shifts 
   FOR UPDATE USING (auth.uid() = business_id);
+
+-- RPC Function to Authenticate Worker securely
+CREATE OR REPLACE FUNCTION public.verify_worker_login(
+  p_username text,
+  p_password text
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_worker record;
+  v_profile record;
+BEGIN
+  SELECT * INTO v_worker
+  FROM public.workers
+  WHERE (lower(username) = lower(trim(p_username)) 
+     OR lower(first_name || ' ' || last_name) = lower(trim(p_username)))
+    AND password_hash = trim(p_password)
+    AND is_active = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT email, business_name, fiscal_number INTO v_profile
+  FROM public.profiles
+  WHERE id = v_worker.business_id;
+
+  RETURN json_build_object(
+    'id', v_worker.id,
+    'business_id', v_worker.business_id,
+    'first_name', v_worker.first_name,
+    'last_name', v_worker.last_name,
+    'username', v_worker.username,
+    'role', v_worker.role,
+    'shift_start_time', v_worker.shift_start_time,
+    'shift_end_time', v_worker.shift_end_time,
+    'work_days', v_worker.work_days,
+    'is_active', v_worker.is_active,
+    'business_email', v_profile.email,
+    'business_name', v_profile.business_name
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.verify_worker_login(text, text) TO anon, authenticated;

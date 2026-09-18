@@ -124,33 +124,25 @@ export const StaffService = {
     if (error) throw error
   },
 
-  workerLogin: async (usernameOrName: string, password: string):Promise<{ worker: Worker; businessEmail?: string } | null> => {
-    const supabase = createClient()
-    const cleanUsername = usernameOrName.trim().toLowerCase()
-    
-    // Find worker matching username or first name + last name
-    const { data: workers, error } = await supabase
-      .from('workers')
-      .select('*, profiles:business_id(email, business_name, fiscal_number)')
-      .eq('is_active', true)
-
-    if (error || !workers) {
-      throw new Error("Llogaria e punëtorit nuk u gjet.")
-    }
-
-    const matched = workers.find((w: any) => {
-      const uMatch = w.username?.toLowerCase() === cleanUsername
-      const nameMatch = `${w.first_name} ${w.last_name}`.toLowerCase() === cleanUsername
-      return (uMatch || nameMatch) && w.password_hash === password
+  workerLogin: async (usernameOrName: string, password: string): Promise<{ worker: Worker; businessEmail?: string } | null> => {
+    const res = await fetch("/api/auth/worker-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: usernameOrName.trim(),
+        password: password.trim(),
+      }),
     })
 
-    if (!matched) {
-      throw new Error("Përdoruesi ose fjalëkalimi është i pasaktë.")
+    const result = await res.json()
+
+    if (!res.ok || !result.worker) {
+      throw new Error(result.error || "Përdoruesi ose fjalëkalimi është i pasaktë.")
     }
 
     return {
-      worker: matched,
-      businessEmail: matched.profiles?.email
+      worker: result.worker,
+      businessEmail: result.businessEmail,
     }
   },
 
