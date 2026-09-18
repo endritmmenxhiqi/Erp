@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { MAX_INVOICE_LENGTH, MAX_ITEMS } from "@/lib/constants"
+import { StaffService, Worker } from "@/lib/services/staff"
+import { TwoFactorDialog } from "@/components/two-factor-dialog"
 
 export default function SalesPage() {
   const { t } = useTranslation()
@@ -36,6 +38,9 @@ export default function SalesPage() {
   const [pendingValues, setPendingValues] = useState<any>(null)
   const [formError, setFormError] = useState("")
   const [profile, setProfile] = useState<any>(null)
+  const [currentWorker, setCurrentWorker] = useState<Worker | null>(null)
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
+  const [showTwoFactor, setShowTwoFactor] = useState(false)
   const supabase = createClient()
 
   const saleSchema = z.object({
@@ -127,12 +132,15 @@ export default function SalesPage() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
+      const worker = StaffService.getCurrentWorker()
+      setCurrentWorker(worker)
+
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (businessId) {
         const { data } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', businessId)
           .single()
         setProfile(data)
       }
@@ -262,13 +270,18 @@ export default function SalesPage() {
         }
       }
 
+      const businessId = await StaffService.getEffectiveBusinessId(supabase) || user.id
+      const workerName = currentWorker ? `${currentWorker.first_name} ${currentWorker.last_name}` : (profile?.business_name || "Admin")
+
       const { data: saleData, error: saleError } = await supabase.from("sales").insert({
         invoice_num: values.invoice_num,
         date: values.date,
         total_amount: values.total_amount,
         vat_rate: values.vat_rate,
         type: values.type,
-        user_id: user.id,
+        user_id: businessId,
+        worker_id: currentWorker?.id || null,
+        worker_name: workerName,
       }).select().single()
 
       if (saleError) throw saleError
@@ -280,7 +293,7 @@ export default function SalesPage() {
         price: item.price,
         unit: item.unit,
         barcode: item.barcode,
-        user_id: user.id
+        user_id: businessId
       }))
 
       const { error: itemsError } = await supabase.from("sale_items").insert(saleItemsToInsert)
@@ -565,8 +578,18 @@ export default function SalesPage() {
                             variant="ghost"
                             size="icon"
                             className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
-                            onClick={() => fields.length > 1 && remove(index)}
+                            onClick={() => {
+                              if (fields.length <= 1) return
+                              const item = form.getValues(`items.${index}`)
+                              if (item && item.item_name && item.item_name.trim()) {
+                                setDeleteIndex(index)
+                                setShowTwoFactor(true)
+                              } else {
+                                remove(index)
+                              }
+                            }}
                             disabled={fields.length === 1}
+                            title="Fshij artikullin (kërkon 2FA)"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -639,6 +662,20 @@ export default function SalesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Two Factor Authorization Modal for Deleting Item */}
+      <TwoFactorDialog
+        open={showTwoFactor}
+        onOpenChange={setShowTwoFactor}
+        title={t("manager_pin_required")}
+        description={t("enter_manager_pin")}
+        onSuccess={() => {
+          if (deleteIndex !== null) {
+            remove(deleteIndex)
+            setDeleteIndex(null)
+          }
+        }}
+      />
     </div>
   )
 }

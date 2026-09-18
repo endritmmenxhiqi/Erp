@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChatDB } from "@/components/ChatDB"
+import { ImpersonationBanner } from "@/components/impersonation-banner"
 
 export default async function DashboardLayout({
   children,
@@ -49,6 +50,7 @@ export default async function DashboardLayout({
         signOutAction={signOut} 
       />
       <main className="flex-1 overflow-y-auto print:overflow-visible print:p-0">
+        <ImpersonationBanner />
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { margin: 0; }

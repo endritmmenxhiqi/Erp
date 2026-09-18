@@ -24,12 +24,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
-import { FileText, Calendar, ChevronRight, Printer, Receipt, Filter, Trash2 } from "lucide-react"
+import { FileText, Calendar, ChevronRight, Printer, Receipt, Filter, Trash2, Edit3, Plus, ShieldCheck, UserCheck } from "lucide-react"
 import { EmptyState } from "@/components/EmptyState"
 import { Spinner } from "@/components/spinner"
 import { toast } from "sonner"
 import { StockService } from "@/lib/services/stock"
+import { StaffService } from "@/lib/services/staff"
+import { TwoFactorDialog } from "@/components/two-factor-dialog"
 
 interface Sale {
   id: number
@@ -39,6 +42,11 @@ interface Sale {
   vat_rate: number
   type: string
   user_id: string
+  worker_id?: number
+  worker_name?: string
+  is_corrected?: boolean
+  corrected_at?: string
+  corrected_by?: string
 }
 
 interface SaleItem {
@@ -77,6 +85,16 @@ export default function SalesBookPage() {
   const [profile, setProfile] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   
+  // Correction State
+  const [isCorrecting, setIsCorrecting] = useState(false)
+  const [correctionItems, setCorrectionItems] = useState<SaleItem[]>([])
+  const [correctionVatRate, setCorrectionVatRate] = useState(18)
+  const [isSavingCorrection, setIsSavingCorrection] = useState(false)
+  
+  // 2FA Dialog State
+  const [twoFactorAction, setTwoFactorAction] = useState<"delete_invoice" | "delete_item" | null>(null)
+  const [itemIndexToDelete, setItemIndexToDelete] = useState<number | null>(null)
+
   // Filters
   const currentYear = new Date().getFullYear().toString()
   const [selectedYear, setSelectedYear] = useState(currentYear)
@@ -98,13 +116,13 @@ export default function SalesBookPage() {
   const fetchSales = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (!businessId) return
 
       let query = supabase
         .from('sales')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', businessId)
         .order('date', { ascending: false })
 
       // Apply Year Filter
@@ -134,12 +152,12 @@ export default function SalesBookPage() {
   }, [supabase, selectedYear, startDate, endDate])
 
   const fetchProfile = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
+    const businessId = await StaffService.getEffectiveBusinessId(supabase)
+    if (businessId) {
       const { data } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', businessId)
         .single()
       setProfile(data)
     }
@@ -175,42 +193,108 @@ export default function SalesBookPage() {
     }
   }, [selectedInvoice])
 
-  const handleDeleteInvoice = async (sale: Sale) => {
-    if (!confirm(t("confirm_delete_invoice"))) return
-    
-    setIsDeleting(true)
+  // Open Correction Modal
+  const handleOpenCorrection = () => {
+    if (!selectedInvoice) return
+    setCorrectionItems(JSON.parse(JSON.stringify(selectedInvoiceItems)))
+    setCorrectionVatRate(selectedInvoice.vat_rate || 18)
+    setIsCorrecting(true)
+  }
+
+  // Calculate Correction Totals
+  const correctionSubtotal = correctionItems.reduce((acc, item) => acc + (Number(item.quantity || 0) * Number(item.price || 0)), 0)
+  const correctionVatAmount = correctionSubtotal * (correctionVatRate / 100)
+  const correctionTotal = correctionSubtotal + correctionVatAmount
+
+  // Save Invoice Correction
+  const handleSaveCorrection = async () => {
+    if (!selectedInvoice) return
+    if (correctionItems.length === 0) {
+      toast.error(t("val_at_least_one"))
+      return
+    }
+
+    setIsSavingCorrection(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Session expired")
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (!businessId) throw new Error("Session expired")
 
-      // 1. Fetch items of the invoice to revert stock (if it's a Mall type)
-      if (sale.type === "Mall") {
-        let itemsToRevert = selectedInvoiceItems
-        if (itemsToRevert.length === 0) {
-          const { data, error } = await supabase
-            .from('sale_items')
-            .select('*')
-            .eq('sale_id', sale.id)
-          if (error) throw error
-          itemsToRevert = data || []
+      // If type is "Mall", synchronize inventory differences
+      if (selectedInvoice.type === "Mall") {
+        // 1. Revert original items back to stock
+        for (const orig of selectedInvoiceItems) {
+          await StockService.updateStock(orig.item_name, orig.quantity, orig.unit, businessId)
         }
-
-        // Revert stock (add the quantities back)
-        for (const item of itemsToRevert) {
-          await StockService.updateStock(
-            item.item_name,
-            item.quantity, // Positive number to add it back to stock
-            item.unit,
-            user.id
-          )
+        // 2. Deduct new corrected items from stock
+        for (const curr of correctionItems) {
+          await StockService.updateStock(curr.item_name, -curr.quantity, curr.unit, businessId)
         }
       }
 
-      // 2. Delete the invoice from database
+      // Update Sales record
+      const { error: updateSaleError } = await supabase
+        .from('sales')
+        .update({
+          total_amount: parseFloat(correctionTotal.toFixed(2)),
+          vat_rate: correctionVatRate,
+          is_corrected: true,
+          corrected_at: new Date().toISOString(),
+        })
+        .eq('id', selectedInvoice.id)
+
+      if (updateSaleError) throw updateSaleError
+
+      // Replace items in sale_items
+      await supabase.from('sale_items').delete().eq('sale_id', selectedInvoice.id)
+
+      const newItemsToInsert = correctionItems.map(item => ({
+        sale_id: selectedInvoice.id,
+        item_name: item.item_name,
+        quantity: item.quantity,
+        price: item.price,
+        unit: item.unit || "copë",
+        barcode: item.barcode || null,
+        user_id: businessId,
+      }))
+
+      const { error: insertItemsError } = await supabase.from('sale_items').insert(newItemsToInsert)
+      if (insertItemsError) throw insertItemsError
+
+      toast.success(t("invoice_corrected_success"))
+      setIsCorrecting(false)
+      setSelectedInvoice(null)
+      fetchSales()
+    } catch (err: any) {
+      console.error("Error correcting invoice:", err)
+      toast.error(err.message || "Gabim gjatë korrigjimit të faturës.")
+    } finally {
+      setIsSavingCorrection(false)
+    }
+  }
+
+  const handleDeleteInvoiceConfirmed = async () => {
+    if (!selectedInvoice) return
+    setIsDeleting(true)
+    try {
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (!businessId) throw new Error("Session expired")
+
+      if (selectedInvoice.type === "Mall") {
+        let itemsToRevert = selectedInvoiceItems
+        if (itemsToRevert.length === 0) {
+          const { data } = await supabase.from('sale_items').select('*').eq('sale_id', selectedInvoice.id)
+          itemsToRevert = data || []
+        }
+
+        for (const item of itemsToRevert) {
+          await StockService.updateStock(item.item_name, item.quantity, item.unit, businessId)
+        }
+      }
+
       const { error: deleteError } = await supabase
         .from('sales')
         .delete()
-        .eq('id', sale.id)
+        .eq('id', selectedInvoice.id)
 
       if (deleteError) throw deleteError
 
@@ -245,7 +329,7 @@ export default function SalesBookPage() {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null)
   const [expandedDate, setExpandedDate] = useState<string | null>(null)
 
-  // Calculate Subtotal and VAT for the selected invoice
+  // Calculate Subtotal and VAT for selected invoice
   let subtotal = selectedInvoiceItems.reduce((acc, item) => acc + (item.quantity * item.price), 0)
   let vatAmount = subtotal * ((selectedInvoice?.vat_rate || 0) / 100)
 
@@ -391,8 +475,9 @@ export default function SalesBookPage() {
                                     <Table>
                                       <TableHeader>
                                         <TableRow className="hover:bg-transparent border-border/50">
-                                          <TableHead className="w-[100px] text-[10px] uppercase font-bold tracking-widest">{t("serial_number")}</TableHead>
+                                          <TableHead className="w-[80px] text-[10px] uppercase font-bold tracking-widest">{t("serial_number")}</TableHead>
                                           <TableHead className="text-[10px] uppercase font-bold tracking-widest">{t("invoice_number")}</TableHead>
+                                          <TableHead className="text-[10px] uppercase font-bold tracking-widest">{t("sold_by")}</TableHead>
                                           <TableHead className="text-[10px] uppercase font-bold tracking-widest">{t("type")}</TableHead>
                                           <TableHead className="text-right text-[10px] uppercase font-bold tracking-widest">{t("total_amount")}</TableHead>
                                         </TableRow>
@@ -405,9 +490,24 @@ export default function SalesBookPage() {
                                             onClick={() => setSelectedInvoice(sale)}
                                           >
                                             <TableCell className="font-medium text-xs">#{idx + 1}</TableCell>
-                                            <TableCell className="font-bold text-primary flex items-center">
-                                               {sale.invoice_num}
-                                               <ChevronRight className="w-3 h-3 ml-1 opacity-50" />
+                                            <TableCell className="font-bold text-primary flex items-center space-x-2">
+                                              <span>{sale.invoice_num}</span>
+                                              {sale.is_corrected && (
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 font-bold uppercase">
+                                                  {t("corrected_badge")}
+                                                </span>
+                                              )}
+                                              <ChevronRight className="w-3 h-3 opacity-50" />
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                              {sale.worker_name ? (
+                                                <span className="flex items-center">
+                                                  <UserCheck className="w-3 h-3 mr-1 text-primary" />
+                                                  {sale.worker_name}
+                                                </span>
+                                              ) : (
+                                                "Admin"
+                                              )}
                                             </TableCell>
                                             <TableCell className="text-xs">{sale.type}</TableCell>
                                             <TableCell className="text-right font-black text-foreground">{sale.total_amount}€</TableCell>
@@ -438,13 +538,20 @@ export default function SalesBookPage() {
       </Card>
 
       {/* Invoice Detail Dialog */}
-      <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
+      <Dialog open={!!selectedInvoice && !isCorrecting} onOpenChange={() => setSelectedInvoice(null)}>
         <DialogContent className="glass border-border max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="print:hidden">
-            <DialogTitle className="text-2xl font-black flex items-center">
-               <Receipt className="w-6 h-6 mr-2 text-primary" />
-               {t("details")}
-            </DialogTitle>
+            <div className="flex items-center justify-between pr-6">
+              <DialogTitle className="text-2xl font-black flex items-center">
+                 <Receipt className="w-6 h-6 mr-2 text-primary" />
+                 {t("details")} #{selectedInvoice?.invoice_num}
+              </DialogTitle>
+              {selectedInvoice?.is_corrected && (
+                <span className="px-2.5 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 font-bold uppercase">
+                  {t("corrected_badge")}
+                </span>
+              )}
+            </div>
           </DialogHeader>
           
           {selectedInvoice && (
@@ -464,6 +571,9 @@ export default function SalesBookPage() {
                       <p className="font-bold text-lg">{t("invoice_number")}: {selectedInvoice.invoice_num}</p>
                       <p className="text-muted-foreground mt-1">{t("date")}: {new Date(selectedInvoice.date).toLocaleDateString()}</p>
                       <p className="text-muted-foreground">{t("type")}: {selectedInvoice.type}</p>
+                      {selectedInvoice.worker_name && (
+                        <p className="text-xs font-bold text-primary mt-1">{t("sold_by")}: {selectedInvoice.worker_name}</p>
+                      )}
                     </div>
                     <div className="text-right">
                       <h2 className="text-xl font-bold uppercase">{profile?.business_name || "BUSINESS NAME"}</h2>
@@ -522,19 +632,28 @@ export default function SalesBookPage() {
                   </div>
                </div>
 
-               <div className="flex justify-end space-x-4 pt-8 print:hidden">
+               <div className="flex flex-wrap justify-end gap-3 pt-8 print:hidden">
+                  <Button 
+                    variant="outline" 
+                    className="h-12 px-5 font-bold rounded-xl border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 flex items-center" 
+                    onClick={handleOpenCorrection}
+                  >
+                     <Edit3 className="w-4 h-4 mr-2" /> {t("correct_invoice")}
+                  </Button>
                   <Button 
                     variant="destructive" 
-                    className="h-12 px-6 font-bold rounded-xl flex items-center" 
-                    onClick={() => handleDeleteInvoice(selectedInvoice)}
+                    className="h-12 px-5 font-bold rounded-xl flex items-center" 
+                    onClick={() => {
+                      setTwoFactorAction("delete_invoice")
+                    }}
                     disabled={isDeleting}
                   >
-                     <Trash2 className="w-5 h-5 mr-2" /> {isDeleting ? t("processing") : t("delete")}
+                     <Trash2 className="w-4 h-4 mr-2" /> {isDeleting ? t("processing") : t("delete")}
                   </Button>
                   <Button variant="outline" className="h-12 border-border" onClick={() => window.print()}>
-                     <Printer className="w-5 h-5 mr-2" /> {t("reprint")}
+                     <Printer className="w-4 h-4 mr-2" /> {t("reprint")}
                   </Button>
-                  <Button className="h-12 primary-gradient px-8 font-bold rounded-xl" onClick={() => setSelectedInvoice(null)}>
+                  <Button className="h-12 primary-gradient px-6 font-bold rounded-xl" onClick={() => setSelectedInvoice(null)}>
                      {t("close")}
                   </Button>
                </div>
@@ -542,6 +661,173 @@ export default function SalesBookPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Invoice Correction Dialog */}
+      <Dialog open={isCorrecting} onOpenChange={setIsCorrecting}>
+        <DialogContent className="glass border-border max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black flex items-center">
+              <Edit3 className="w-6 h-6 mr-2 text-yellow-500" />
+              {t("correct_invoice")} #{selectedInvoice?.invoice_num}
+            </DialogTitle>
+            <CardDescription>
+              Modifikoni artikujt, sasitë ose çmimet. Diferencat e inventarit do të rillogariten automatikisht.
+            </CardDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{t("details")}</h4>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="rounded-xl border-primary/20 text-primary font-bold"
+                onClick={() => setCorrectionItems([...correctionItems, { id: Date.now(), item_name: "", quantity: 1, price: 0, unit: "copë", barcode: "" }])}
+              >
+                <Plus className="w-4 h-4 mr-1.5" /> {t("add_item")}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {correctionItems.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 p-3 rounded-2xl bg-accent/20 border border-border/50 items-center">
+                  <div className="sm:col-span-4">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("item_name")}</label>
+                    <Input
+                      value={item.item_name}
+                      onChange={(e) => {
+                        const newItems = [...correctionItems]
+                        newItems[idx].item_name = e.target.value
+                        setCorrectionItems(newItems)
+                      }}
+                      placeholder={t("item_name")}
+                      className="h-10 bg-background/50 text-sm font-bold"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("quantity")}</label>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const newItems = [...correctionItems]
+                        newItems[idx].quantity = parseFloat(e.target.value) || 0
+                        setCorrectionItems(newItems)
+                      }}
+                      className="h-10 bg-background/50 text-sm font-bold"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("unit")}</label>
+                    <Input
+                      value={item.unit}
+                      onChange={(e) => {
+                        const newItems = [...correctionItems]
+                        newItems[idx].unit = e.target.value
+                        setCorrectionItems(newItems)
+                      }}
+                      className="h-10 bg-background/50 text-sm"
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("price")} (€)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={item.price}
+                      onChange={(e) => {
+                        const newItems = [...correctionItems]
+                        newItems[idx].price = parseFloat(e.target.value) || 0
+                        setCorrectionItems(newItems)
+                      }}
+                      className="h-10 bg-background/50 text-sm font-bold text-primary"
+                    />
+                  </div>
+                  <div className="sm:col-span-1 flex items-end justify-center pt-4 sm:pt-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                      onClick={() => {
+                        setItemIndexToDelete(idx)
+                        setTwoFactorAction("delete_item")
+                      }}
+                      disabled={correctionItems.length <= 1}
+                      title="Fshij me 2FA"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals Summary */}
+            <div className="flex justify-end p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <div className="w-64 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("subtotal")}:</span>
+                  <span className="font-bold">{correctionSubtotal.toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("vat_amount")} ({correctionVatRate}%):</span>
+                  <span className="font-bold">{correctionVatAmount.toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between text-lg font-black text-primary border-t border-primary/20 pt-2">
+                  <span>{t("grand_total")}:</span>
+                  <span>{correctionTotal.toFixed(2)} €</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCorrecting(false)}
+              className="rounded-xl border-border"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              type="button"
+              disabled={isSavingCorrection}
+              onClick={handleSaveCorrection}
+              className="primary-gradient font-bold rounded-xl px-8"
+            >
+              {isSavingCorrection ? <Spinner className="mr-2" /> : "Ruaj Korrigjimet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* TwoFactorDialog for Deleting Item or Deleting Invoice */}
+      <TwoFactorDialog
+        open={twoFactorAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTwoFactorAction(null)
+            setItemIndexToDelete(null)
+          }
+        }}
+        title={t("manager_pin_required")}
+        description={twoFactorAction === "delete_invoice" ? "Shënoni PIN-in e menaxherit për të autorizuar fshirjen e të gjithë faturës." : t("enter_manager_pin")}
+        onSuccess={() => {
+          if (twoFactorAction === "delete_invoice") {
+            handleDeleteInvoiceConfirmed()
+          } else if (twoFactorAction === "delete_item" && itemIndexToDelete !== null) {
+            const updated = [...correctionItems]
+            updated.splice(itemIndexToDelete, 1)
+            setCorrectionItems(updated)
+            setItemIndexToDelete(null)
+          }
+          setTwoFactorAction(null)
+        }}
+      />
     </div>
   )
 }

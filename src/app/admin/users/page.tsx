@@ -2,13 +2,16 @@
 
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Mail, Clock, Hash, Shield, Search, Sparkles, AlertCircle } from "lucide-react"
+import { Users, Mail, Clock, Hash, Shield, Search, Sparkles, LogIn, ExternalLink, ShieldAlert, CheckCircle2, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { toast } from "sonner"
 import { Spinner } from "@/components/spinner"
+import { useRouter } from "next/navigation"
 
 interface Profile {
   id: string
@@ -22,9 +25,12 @@ interface Profile {
 
 export default function AdminUsersPage() {
   const { t, language } = useTranslation()
+  const router = useRouter()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedBusiness, setSelectedBusiness] = useState<Profile | null>(null)
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -56,6 +62,29 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleOpenAccessModal = (profile: Profile) => {
+    setSelectedBusiness(profile)
+    setIsAccessModalOpen(true)
+  }
+
+  const handleImpersonate = (type: "direct" | "request") => {
+    if (!selectedBusiness) return
+
+    sessionStorage.setItem("impersonated_business_id", selectedBusiness.id)
+    sessionStorage.setItem("impersonated_business_name", selectedBusiness.business_name)
+    localStorage.setItem("impersonated_business_id", selectedBusiness.id)
+    localStorage.setItem("impersonated_business_name", selectedBusiness.business_name)
+
+    if (type === "direct") {
+      toast.success(`Hyrje e drejtpërdrejtë e autorizuar në: ${selectedBusiness.business_name}`)
+    } else {
+      toast.success(`Kërkesa u regjistrua. Duke u kyçur në: ${selectedBusiness.business_name}`)
+    }
+
+    setIsAccessModalOpen(false)
+    router.push("/dashboard")
+  }
+
   const filteredProfiles = profiles.filter(p => 
     p.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,11 +99,11 @@ export default function AdminUsersPage() {
             <Shield className="w-4 h-4" />
             <span>{t("admin_panel")}</span>
           </div>
-          <h2 className="text-5xl font-extrabold tracking-tight text-foreground leading-tight">
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
             {t("user_mgmt")}
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl">
-            {language === 'sq' ? 'Menaxhoni bizneset, licencat dhe veçoritë e sistemit.' : 'Manage businesses, licenses and system features.'}
+          <p className="text-muted-foreground text-base sm:text-lg max-w-xl">
+            {language === 'sq' ? 'Menaxhoni bizneset, licencat, veçoritë e AI dhe qasuni në çdo llogari.' : 'Manage businesses, licenses, AI features and access any account.'}
           </p>
         </div>
         <div className="w-full sm:w-auto">
@@ -119,24 +148,25 @@ export default function AdminUsersPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-accent/10 border-y border-border">
-                      <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">{t("business_name")}</th>
-                      <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Email / {t("fiscal_number")}</th>
-                      <th className="h-14 px-8 text-center align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">AI Feature</th>
-                      <th className="h-14 px-8 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Role / Date</th>
+                      <th className="h-14 px-6 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">{t("business_name")}</th>
+                      <th className="h-14 px-6 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Email / {t("fiscal_number")}</th>
+                      <th className="h-14 px-6 text-center align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">AI Feature</th>
+                      <th className="h-14 px-6 text-left align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Role / Date</th>
+                      <th className="h-14 px-6 text-right align-middle font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Qasja në Biznes</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {filteredProfiles.map((p) => (
                       <tr key={p.id} className="group hover:bg-accent/5 transition-colors">
-                        <td className="p-8 align-middle">
+                        <td className="p-6 align-middle">
                           <div className="flex items-center space-x-3">
                              <div className="w-10 h-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive font-bold group-hover:scale-110 transition-transform">
-                               {p.business_name[0].toUpperCase()}
+                               {p.business_name[0]?.toUpperCase() || 'B'}
                              </div>
                              <div className="font-bold text-foreground transition-colors">{p.business_name}</div>
                           </div>
                         </td>
-                        <td className="p-8 align-middle text-zinc-500">
+                        <td className="p-6 align-middle text-zinc-500">
                            <div className="flex flex-col space-y-1">
                              <div className="flex items-center">
                                <Mail className="w-3.5 h-3.5 mr-2 text-zinc-400" />
@@ -148,7 +178,7 @@ export default function AdminUsersPage() {
                              </div>
                            </div>
                         </td>
-                        <td className="p-8 align-middle text-center">
+                        <td className="p-6 align-middle text-center">
                           <div className="flex flex-col items-center justify-center space-y-2">
                              <div className="flex items-center space-x-3 bg-muted/30 p-2 rounded-2xl border border-border/50">
                                 <Sparkles className={`w-4 h-4 ${p.ai_enabled ? 'text-yellow-500' : 'text-zinc-500'}`} />
@@ -163,7 +193,7 @@ export default function AdminUsersPage() {
                              </span>
                           </div>
                         </td>
-                        <td className="p-8 align-middle">
+                        <td className="p-6 align-middle">
                           <div className="flex flex-col space-y-2">
                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border w-fit ${
                               p.role === 'admin' 
@@ -178,6 +208,15 @@ export default function AdminUsersPage() {
                             </div>
                           </div>
                         </td>
+                        <td className="p-6 align-middle text-right">
+                          <Button
+                            onClick={() => handleOpenAccessModal(p)}
+                            className="h-10 px-4 rounded-xl bg-destructive/10 hover:bg-destructive text-destructive hover:text-white border border-destructive/20 font-bold text-xs transition-all shadow-sm"
+                          >
+                            <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                            {t("impersonate_business")}
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -187,6 +226,82 @@ export default function AdminUsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Impersonation & Direct Override Dialog */}
+      <Dialog open={isAccessModalOpen} onOpenChange={setIsAccessModalOpen}>
+        <DialogContent className="glass border-border rounded-3xl max-w-lg">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive mb-2">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-center">
+              {t("impersonate_business")}
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              Zgjidhni mënyrën e qasjes administrative në llogarinë e <span className="font-bold text-foreground">{selectedBusiness?.business_name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 my-2">
+            {/* Option 1: Direct Entry (No Approval) */}
+            <div 
+              onClick={() => handleImpersonate("direct")}
+              className="p-5 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 cursor-pointer transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-sm flex items-center">
+                      {t("direct_override")}
+                      <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground font-black uppercase">
+                        Super Admin
+                      </span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t("direct_override_desc")}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-destructive" />
+              </div>
+            </div>
+
+            {/* Option 2: Request Access */}
+            <div 
+              onClick={() => handleImpersonate("request")}
+              className="p-5 rounded-2xl border border-border/80 bg-accent/20 hover:bg-accent/40 cursor-pointer transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-sm">{t("access_request")}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t("request_access_desc")}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAccessModalOpen(false)}
+              className="w-full rounded-xl border-border"
+            >
+              {t("cancel")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
