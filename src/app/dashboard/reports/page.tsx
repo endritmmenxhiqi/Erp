@@ -299,7 +299,7 @@ export default function ReportsPage() {
                         <Tooltip 
                           cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                           contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                          formatter={(value: number) => [`€${value.toFixed(2)}`, 'Shitjet']}
+                          formatter={(value: any) => [`€${Number(value || 0).toFixed(2)}`, 'Shitjet']}
                           labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', marginBottom: '4px' }}
                         />
                         <Bar 
@@ -313,7 +313,7 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <EmptyState
-                    icon={<BarChart3 className="w-12 h-12 text-muted-foreground/30" />}
+                    icon={BarChart3}
                     title={t("no_sales_data") || "Nuk ka të dhëna"}
                     description="Zgjidhni një periudhë tjetër për të parë trendin."
                   />
