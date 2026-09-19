@@ -2,9 +2,11 @@
 
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Briefcase, Phone, MapPin, Hash, Sparkles, TrendingUp, ShieldCheck } from "lucide-react"
+import { StaffService } from "@/lib/services/staff"
+import { Briefcase, Phone, MapPin, Hash, Sparkles, TrendingUp, ShieldCheck, Rocket, FileText, Users, Package, BarChart3, Settings, UserCog, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
+import Link from "next/link"
 
 interface Profile {
   id: string
@@ -22,15 +24,25 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
+  const menuItems = [
+    { title: t("purchases"), href: "/dashboard/purchases", icon: Rocket, tone: "text-amber-500" },
+    { title: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText, tone: "text-orange-500" },
+    { title: t("sales"), href: "/dashboard/sales", icon: Users, tone: "text-emerald-500" },
+    { title: t("sales_book"), href: "/dashboard/sales-book", icon: FileText, tone: "text-sky-500" },
+    { title: t("products"), href: "/dashboard/products", icon: Package, tone: "text-violet-500" },
+    { title: t("reports"), href: "/dashboard/reports", icon: BarChart3, tone: "text-rose-500" },
+    { title: t("consumption"), href: "/dashboard/consumption", icon: Settings, tone: "text-zinc-500" },
+    { title: t("staff_mgmt"), href: "/dashboard/staff", icon: UserCog, tone: "text-indigo-500" },
+  ]
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (businessId) {
         const { data } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', businessId)
           .single()
         setProfile(data as Profile)
       }
@@ -68,6 +80,27 @@ export default function DashboardPage() {
         <p className="text-muted-foreground text-lg max-w-xl">
           {t("dashboard_desc")}
         </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {menuItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <Link key={item.href} href={item.href}>
+              <Card className="glass border-border h-full hover:border-primary/40 hover:bg-accent/30 transition-all group">
+                <CardContent className="p-5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-xl bg-accent/40 border border-border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Icon className={`w-5 h-5 ${item.tone}`} />
+                    </div>
+                    <div className="font-bold text-sm text-foreground truncate">{item.title}</div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                </CardContent>
+              </Card>
+            </Link>
+          )
+        })}
       </div>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">

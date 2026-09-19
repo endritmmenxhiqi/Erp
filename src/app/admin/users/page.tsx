@@ -2,7 +2,7 @@
 
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Mail, Clock, Hash, Shield, Search, Sparkles, LogIn, ExternalLink, ShieldAlert, CheckCircle2, ChevronRight } from "lucide-react"
+import { Users, Mail, Clock, Hash, Shield, Search, Sparkles, LogIn, ShieldAlert, CheckCircle2, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
@@ -57,8 +57,8 @@ export default function AdminUsersPage() {
 
       setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, ai_enabled: !currentStatus } : p))
       toast.success(language === 'sq' ? "Statusi i AI u ndryshua" : "AI Status updated")
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gabim gjate perditesimit te AI.")
     }
   }
 
@@ -83,6 +83,7 @@ export default function AdminUsersPage() {
 
     setIsAccessModalOpen(false)
     router.push("/dashboard")
+    router.refresh()
   }
 
   const filteredProfiles = profiles.filter(p => 

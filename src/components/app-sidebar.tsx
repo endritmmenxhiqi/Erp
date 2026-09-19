@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -14,8 +13,6 @@ import {
   Rocket, 
   ChevronRight,
   ShieldCheck,
-  UserCheck,
-  Clock,
   Briefcase
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,6 +21,7 @@ import { ThemeToggle } from "./theme-toggle"
 import { LanguageToggle } from "./language-toggle"
 import { useTranslation } from "@/components/language-provider"
 import { StaffService, Worker } from "@/lib/services/staff"
+import type { LucideIcon } from "lucide-react"
 
 interface SidebarProps {
   email: string
@@ -35,20 +33,21 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
-  const [worker, setWorker] = useState<Worker | null>(null)
-
-  useEffect(() => {
-    const currentWorker = StaffService.getCurrentWorker()
-    setWorker(currentWorker)
-  }, [pathname])
+  const worker: Worker | null = typeof window === "undefined" ? null : StaffService.getCurrentWorker()
+  const isImpersonatingBusiness = typeof window !== "undefined" && Boolean(
+      sessionStorage.getItem("impersonated_business_id") ||
+      localStorage.getItem("impersonated_business_id")
+  )
 
   // Determine effective role & navigation items
   let effectiveRole = role
   if (worker) {
     effectiveRole = worker.role
+  } else if (role === "admin" && isImpersonatingBusiness) {
+    effectiveRole = "business_admin"
   }
 
-  let navItems: { name: string; href: string; icon: any }[] = []
+  let navItems: { name: string; href: string; icon: LucideIcon }[] = []
 
   if (effectiveRole === 'admin') {
     navItems = [
