@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/utils/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
+import { validateReadOnlySql } from "@/lib/sql-safety";
 
 const requestSchema = z.object({
   message: z
@@ -46,6 +48,9 @@ Guidelines:
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimit(req, "chat-db", { limit: 20, windowMs: 60_000 });
+    if (limited) return limited;
+
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -118,7 +123,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (aiResponse.type === "sql" && aiResponse.sql) {
-      const sql = aiResponse.sql.replace(/;$/, "");
+      const validation = validateReadOnlySql(aiResponse.sql);
+      if (!validation.ok) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+
+      const sql = validation.sql;
       const { data, error } = await supabase.rpc("execute_sql", { query: sql });
 
       if (error) {

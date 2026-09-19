@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 export interface Worker {
   id: number
@@ -6,7 +7,7 @@ export interface Worker {
   first_name: string
   last_name: string
   username: string
-  password_hash: string
+  password_hash?: string
   role: 'seller' | 'commercialist' | 'manager'
   shift_start_time?: string
   shift_end_time?: string
@@ -26,8 +27,14 @@ export interface WorkerShift {
   worker?: Worker
 }
 
+type SaleSummary = {
+  total_amount: number | string | null
+  worker_id: number | string | null
+  worker_name: string | null
+}
+
 export const StaffService = {
-  getEffectiveBusinessId: async (supabaseClient?: any): Promise<string | null> => {
+  getEffectiveBusinessId: async (supabaseClient?: SupabaseClient): Promise<string | null> => {
     const supabase = supabaseClient || createClient()
     if (typeof window !== "undefined") {
       const impersonatedId = sessionStorage.getItem("impersonated_business_id") || localStorage.getItem("impersonated_business_id")
@@ -228,7 +235,7 @@ export const StaffService = {
 
     const result: Record<string, { count: number; total: number; worker_name: string }> = {}
 
-    sales.forEach((s: any) => {
+    ;(sales as SaleSummary[]).forEach((s) => {
       const key = s.worker_id ? String(s.worker_id) : 'admin_direct'
       const name = s.worker_name || 'Admin / Pa caktuar'
       if (!result[key]) {

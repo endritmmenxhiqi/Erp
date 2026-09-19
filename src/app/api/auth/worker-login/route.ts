@@ -1,8 +1,37 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimit } from "@/lib/rate-limit"
+
+type WorkerLoginRecord = {
+  id: number
+  business_id: string
+  first_name: string
+  last_name: string
+  username: string
+  password_hash?: string
+  role: "seller" | "commercialist" | "manager"
+  shift_start_time?: string | null
+  shift_end_time?: string | null
+  work_days?: string | null
+  is_active: boolean
+  business_email?: string
+  business_name?: string
+  profiles?: {
+    email?: string
+    business_name?: string
+  } | null
+}
+
+type WorkerSession = {
+  access_token: string
+  refresh_token: string
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, "worker-login", { limit: 10, windowMs: 60_000 })
+    if (limited) return limited
+
     const { username, password } = await request.json()
 
     if (!username || !password) {
@@ -32,32 +61,32 @@ export async function POST(request: NextRequest) {
     const cleanUsername = String(username).trim().toLowerCase()
     const cleanPassword = String(password).trim()
 
-    let matchedWorker: any = null
+    let matchedWorker: WorkerLoginRecord | null = null
     let businessEmail: string | undefined
     let businessName: string | undefined
 
     // 1. Try RPC function first (if created in DB)
-    const { data: rpcWorker, error: rpcError } = await supabase.rpc('verify_worker_login', {
+    const { data: rpcWorker } = await supabase.rpc('verify_worker_login', {
       p_username: cleanUsername,
       p_password: cleanPassword,
     })
 
     if (rpcWorker) {
+      const worker = rpcWorker as WorkerLoginRecord
       matchedWorker = {
-        id: rpcWorker.id,
-        business_id: rpcWorker.business_id,
-        first_name: rpcWorker.first_name,
-        last_name: rpcWorker.last_name,
-        username: rpcWorker.username,
-        password_hash: cleanPassword,
-        role: rpcWorker.role,
-        shift_start_time: rpcWorker.shift_start_time,
-        shift_end_time: rpcWorker.shift_end_time,
-        work_days: rpcWorker.work_days,
-        is_active: rpcWorker.is_active,
+        id: worker.id,
+        business_id: worker.business_id,
+        first_name: worker.first_name,
+        last_name: worker.last_name,
+        username: worker.username,
+        role: worker.role,
+        shift_start_time: worker.shift_start_time,
+        shift_end_time: worker.shift_end_time,
+        work_days: worker.work_days,
+        is_active: worker.is_active,
       }
-      businessEmail = rpcWorker.business_email
-      businessName = rpcWorker.business_name
+      businessEmail = worker.business_email
+      businessName = worker.business_name
     } else {
       // 2. Direct table fallback search
       const { data: workers, error: queryError } = await supabase
@@ -66,11 +95,11 @@ export async function POST(request: NextRequest) {
         .eq('is_active', true)
 
       if (!queryError && workers && workers.length > 0) {
-        matchedWorker = workers.find((w: any) => {
+        matchedWorker = (workers as WorkerLoginRecord[]).find((w) => {
           const uMatch = w.username?.toLowerCase() === cleanUsername
           const nameMatch = `${w.first_name} ${w.last_name}`.toLowerCase() === cleanUsername
           return (uMatch || nameMatch) && String(w.password_hash).trim() === cleanPassword
-        })
+        }) || null
 
         if (matchedWorker) {
           businessEmail = matchedWorker.profiles?.email
@@ -88,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     // If we have the service role key, generate a session for the business user
     // so the worker's client-side Supabase queries work with RLS
-    let sessionData: any = null
+    let sessionData: WorkerSession | null = null
     if (supabaseServiceKey) {
       try {
         // Generate a magic link for the business user (returns tokens without sending email)
@@ -123,7 +152,18 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({
-      worker: matchedWorker,
+      worker: {
+        id: matchedWorker.id,
+        business_id: matchedWorker.business_id,
+        first_name: matchedWorker.first_name,
+        last_name: matchedWorker.last_name,
+        username: matchedWorker.username,
+        role: matchedWorker.role,
+        shift_start_time: matchedWorker.shift_start_time,
+        shift_end_time: matchedWorker.shift_end_time,
+        work_days: matchedWorker.work_days,
+        is_active: matchedWorker.is_active,
+      },
       businessEmail,
       businessName,
       session: sessionData,
@@ -143,14 +183,15 @@ export async function POST(request: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       sameSite: 'lax',
-      httpOnly: false,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
     })
 
     return response
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Worker login API error:", err)
     return NextResponse.json(
-      { error: err.message || "Ndodhi një gabim gjatë kyçjes së punëtorit." },
+      { error: err instanceof Error ? err.message : "Ndodhi një gabim gjatë kyçjes së punëtorit." },
       { status: 500 }
     )
   }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_FILES = 10;
@@ -194,6 +196,19 @@ CRITICAL RULES:
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimit(req, "extract", { limit: 8, windowMs: 60_000 });
+    if (limited) return limited;
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Sesioni ka skaduar. Ju lutem hyni perseri." }, { status: 401 });
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "Mungon OpenAI API Key ne .env.local" }, { status: 500 });

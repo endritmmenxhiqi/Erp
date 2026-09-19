@@ -16,7 +16,6 @@ import {
   Clock, 
   ShieldCheck, 
   KeyRound, 
-  DollarSign, 
   TrendingUp, 
   Trash2, 
   Edit3, 
@@ -117,7 +116,7 @@ export default function StaffManagementPage() {
       first_name: worker.first_name,
       last_name: worker.last_name,
       username: worker.username,
-      password_hash: worker.password_hash,
+      password_hash: worker.password_hash || "",
       role: worker.role,
       shift_start_time: worker.shift_start_time || "",
       shift_end_time: worker.shift_end_time || "",
@@ -145,8 +144,8 @@ export default function StaffManagementPage() {
       }
       setIsModalOpen(false)
       loadData()
-    } catch (err: any) {
-      toast.error(err.message || "Gabim gjatë ruajtjes së punëtorit.")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gabim gjatë ruajtjes së punëtorit.")
     } finally {
       setIsSaving(false)
     }
@@ -158,8 +157,8 @@ export default function StaffManagementPage() {
       await StaffService.deleteWorker(id)
       toast.success(t("worker_deleted_success"))
       loadData()
-    } catch (err: any) {
-      toast.error(err.message || "Gabim gjatë fshirjes.")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gabim gjatë fshirjes.")
     }
   }
 
@@ -180,8 +179,8 @@ export default function StaffManagementPage() {
         setIsPinModalOpen(false)
         setNewPin("")
       }
-    } catch (err: any) {
-      toast.error(err.message || "Gabim gjatë përditësimit të PIN-it.")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gabim gjatë përditësimit të PIN-it.")
     } finally {
       setIsSaving(false)
     }
@@ -377,7 +376,7 @@ export default function StaffManagementPage() {
               </div>
               <h3 className="text-xl font-bold">Nuk keni shtuar ende asnjë punëtor</h3>
               <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                Krijoni punëtorët e parë për t'u mundësuar shitësve dhe komercialistëve të kyçen me llogaritë e tyre.
+                Krijoni punëtorët e parë për t&apos;u mundësuar shitësve dhe komercialistëve të kyçen me llogaritë e tyre.
               </p>
               <Button onClick={handleOpenAddModal} className="primary-gradient font-bold rounded-xl">
                 <UserPlus className="w-4 h-4 mr-2" />
@@ -425,9 +424,6 @@ export default function StaffManagementPage() {
                         <td className="p-6 align-middle">
                           <div className="font-mono text-xs text-foreground bg-accent/20 px-2.5 py-1 rounded-lg border border-border/50 w-fit">
                             @{worker.username}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground font-mono mt-1">
-                            Pw: {worker.password_hash}
                           </div>
                         </td>
                         <td className="p-6 align-middle">
@@ -553,7 +549,9 @@ export default function StaffManagementPage() {
                 <label className="text-xs font-bold uppercase text-muted-foreground px-1">{t("role")} *</label>
                 <Select
                   value={formData.role}
-                  onValueChange={(val: any) => setFormData({ ...formData, role: val })}
+                  onValueChange={(val) => {
+                    if (val) setFormData({ ...formData, role: val })
+                  }}
                 >
                   <SelectTrigger className="h-11 bg-background/50 rounded-xl font-bold">
                     <SelectValue placeholder={t("role")} />
