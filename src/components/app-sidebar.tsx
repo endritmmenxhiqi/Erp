@@ -13,7 +13,11 @@ import {
   Rocket, 
   ChevronRight,
   ShieldCheck,
-  Briefcase
+  Briefcase,
+  Truck,
+  ClipboardList,
+  UtensilsCrossed,
+  Sparkles
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -71,12 +75,16 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
     // Business Super Admin / Owner / Manager has full access
     navItems = [
       { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
-      { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
-      { name: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText },
       { name: t("sales"), href: "/dashboard/sales", icon: Users },
+      { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+      { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+      { name: t("clients"), href: "/dashboard/clients", icon: Users },
+      { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+      { name: t("suppliers"), href: "/dashboard/suppliers", icon: Truck },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+      { name: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText },
       { name: t("sales_book"), href: "/dashboard/sales-book", icon: FileText },
       { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
-      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
       { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
       { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
     ]
@@ -94,7 +102,7 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
   }
 
   return (
-    <div className="w-72 h-screen flex flex-col bg-sidebar dark:bg-[#0a0a0c] border-r border-border sticky top-0 overflow-hidden print:hidden">
+    <div className="hidden md:flex w-72 h-screen flex-col bg-sidebar dark:bg-[#0a0a0c] border-r border-border sticky top-0 overflow-hidden print:hidden">
       {/* Brand */}
       <div className="p-8">
         <div className="flex items-center space-x-3 group cursor-pointer">

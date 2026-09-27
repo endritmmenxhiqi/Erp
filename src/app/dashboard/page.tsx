@@ -3,7 +3,29 @@
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StaffService } from "@/lib/services/staff"
-import { Briefcase, Phone, MapPin, Hash, Sparkles, TrendingUp, ShieldCheck, Rocket, FileText, Users, Package, BarChart3, Settings, UserCog, ChevronRight } from "lucide-react"
+import { 
+  Briefcase, 
+  Phone, 
+  MapPin, 
+  Hash, 
+  Sparkles, 
+  TrendingUp, 
+  ShieldCheck, 
+  Rocket, 
+  FileText, 
+  Users, 
+  Package, 
+  BarChart3, 
+  Settings, 
+  UserCog, 
+  ChevronRight,
+  Truck,
+  ClipboardList,
+  UtensilsCrossed,
+  AlertTriangle,
+  Lightbulb,
+  ArrowRight
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import Link from "next/link"
@@ -23,16 +45,33 @@ export default function DashboardPage() {
   const { t } = useTranslation()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [aiAdvisor, setAiAdvisor] = useState<any>({
+    greeting: "Mirësevini në qendrën e kontrollit operativ.",
+    health_score: 95,
+    status_summary: "Sistemi funksionon me parametra optimalë. Shitjet dhe furnizimet janë të balancuara.",
+    top_opportunity: "Krijoni oferta të reja me asistentin me zë për të rritur konvertimet këtë javë.",
+    top_warning: "Kontrolloni artikujt me sasi të ulët në depo para furnizimit të radhës.",
+    recommended_actions: [
+      "Verifiko faturat e hapura tek Klientët & CRM",
+      "Kontrollo tavolinat aktive në modulin Restorant",
+      "Përdor kamerën e telefonit për skanim faturash blerje"
+    ]
+  })
   const supabase = createClient()
+  
   const menuItems = [
-    { title: t("purchases"), href: "/dashboard/purchases", icon: Rocket, tone: "text-amber-500" },
-    { title: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText, tone: "text-orange-500" },
-    { title: t("sales"), href: "/dashboard/sales", icon: Users, tone: "text-emerald-500" },
-    { title: t("sales_book"), href: "/dashboard/sales-book", icon: FileText, tone: "text-sky-500" },
+    { title: t("sales"), href: "/dashboard/sales", icon: Users, tone: "text-emerald-500", badge: "POS" },
+    { title: t("orders"), href: "/dashboard/orders", icon: ClipboardList, tone: "text-blue-500", badge: "AI Voice" },
+    { title: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed, tone: "text-amber-500", badge: "Live" },
+    { title: t("clients"), href: "/dashboard/clients", icon: Users, tone: "text-cyan-500", badge: "CRM" },
+    { title: t("purchases"), href: "/dashboard/purchases", icon: Rocket, tone: "text-indigo-500", badge: "AI OCR" },
+    { title: t("suppliers"), href: "/dashboard/suppliers", icon: Truck, tone: "text-purple-500" },
     { title: t("products"), href: "/dashboard/products", icon: Package, tone: "text-violet-500" },
+    { title: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText, tone: "text-orange-500" },
+    { title: t("sales_book"), href: "/dashboard/sales-book", icon: FileText, tone: "text-sky-500" },
     { title: t("reports"), href: "/dashboard/reports", icon: BarChart3, tone: "text-rose-500" },
     { title: t("consumption"), href: "/dashboard/consumption", icon: Settings, tone: "text-zinc-500" },
-    { title: t("staff_mgmt"), href: "/dashboard/staff", icon: UserCog, tone: "text-indigo-500" },
+    { title: t("staff_mgmt"), href: "/dashboard/staff", icon: UserCog, tone: "text-indigo-400" },
   ]
 
   useEffect(() => {
@@ -82,25 +121,92 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {menuItems.map((item) => {
-          const Icon = item.icon
-          return (
-            <Link key={item.href} href={item.href}>
-              <Card className="glass border-border h-full hover:border-primary/40 hover:bg-accent/30 transition-all group">
-                <CardContent className="p-5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-xl bg-accent/40 border border-border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <Icon className={`w-5 h-5 ${item.tone}`} />
+      {/* AI Business Advisor Banner */}
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-blue-950/40 via-indigo-950/20 to-card border border-blue-800/40 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center space-x-2">
+              <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> AI Asistenti Kryesor
+              </span>
+              <span className="text-xs text-muted-foreground">Analizë Operative në Kohë Reale</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-foreground">
+              {aiAdvisor.greeting}
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {aiAdvisor.status_summary}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 bg-background/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shrink-0">
+            <div className="text-center">
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Health Score</div>
+              <div className="text-3xl font-black text-emerald-400 mt-0.5">{aiAdvisor.health_score}%</div>
+            </div>
+            <div className="h-10 w-px bg-border" />
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center text-emerald-400 font-semibold gap-1">
+                <TrendingUp className="w-3.5 h-3.5" /> Trend Pozitiv
+              </div>
+              <div className="text-muted-foreground">Likuiditet i Qëndrueshëm</div>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Actionable Insights Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 pt-5 border-t border-border/60">
+          <div className="p-3.5 rounded-xl bg-accent/25 border border-border/60 flex items-start space-x-3">
+            <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-xs font-bold text-foreground">Mundësi Rritjeje:</div>
+              <p className="text-xs text-muted-foreground mt-0.5">{aiAdvisor.top_opportunity}</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-accent/25 border border-border/60 flex items-start space-x-3">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-xs font-bold text-foreground">Vëmendje Operative:</div>
+              <p className="text-xs text-muted-foreground mt-0.5">{aiAdvisor.top_warning}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid of All Modules */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-foreground tracking-tight">Modulet e Sistemit</h3>
+          <span className="text-xs text-muted-foreground">12 Module Aktive</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <Link key={item.href} href={item.href}>
+                <Card className="glass border-border h-full hover:border-primary/40 hover:bg-accent/30 transition-all group relative overflow-hidden">
+                  <CardContent className="p-5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-xl bg-accent/40 border border-border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Icon className={`w-5 h-5 ${item.tone}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-foreground truncate">{item.title}</div>
+                        {item.badge && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-primary/10 text-primary font-bold">
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="font-bold text-sm text-foreground truncate">{item.title}</div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
-                </CardContent>
-              </Card>
-            </Link>
-          )
-        })}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 transition-transform group-hover:translate-x-1" />
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">

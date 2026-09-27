@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 import { AppSidebar } from "@/components/app-sidebar"
+import { MobileNav } from "@/components/mobile-nav"
 import { ChatDB } from "@/components/ChatDB"
 import { ImpersonationBanner } from "@/components/impersonation-banner"
 
@@ -81,7 +82,12 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-background print:block print:bg-white print:min-h-0 print:h-auto">
+    <div className="flex flex-col md:flex-row min-h-screen bg-background print:block print:bg-white print:min-h-0 print:h-auto">
+      <MobileNav 
+        email={email} 
+        role={role} 
+        signOutAction={signOut} 
+      />
       <AppSidebar 
         email={email} 
         role={role} 
@@ -96,7 +102,7 @@ export default async function DashboardLayout({
             .print-padding { padding: 15mm !important; }
           }
         `}} />
-        <div className="p-8 sm:p-12 max-w-7xl mx-auto print:p-0 print:max-w-none">
+        <div className="p-4 sm:p-8 md:p-12 pb-24 md:pb-12 max-w-7xl mx-auto print:p-0 print:max-w-none">
           <div className="hidden print:block print-padding">
             {/* Print wrapper */}
           </div>

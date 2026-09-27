@@ -8,8 +8,23 @@ import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "ERP System",
-  description: "Advanced Business Management System",
+  title: "Agoni ERP - Inteligjencë Artificiale për Biznes",
+  description: "Sistemi më i avancuar me AI për shitje, inventar, blerje, restorante dhe faturim",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Agoni ERP",
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#09090b",
 };
 
 export default function RootLayout({
