@@ -374,7 +374,7 @@ export default function HRPayrollPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium mb-1 block">Banka</label>
-                <Select value={workerForm.bank_name} onValueChange={v => setWorkerForm(p => ({...p, bank_name:v}))}>
+                <Select value={workerForm.bank_name} onValueChange={(v) => setWorkerForm(p => ({...p, bank_name: v ?? ""}))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{["TEB","ProCredit","Raiffeisen","BKT","NLB","Banka Ekonomike","Isbank"].map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                 </Select>
@@ -411,7 +411,7 @@ export default function HRPayrollPage() {
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium mb-1 block">Punonjesi</label>
-              <Select value={advForm.worker_id} onValueChange={v => setAdvForm(p => ({...p, worker_id:v}))}>
+              <Select value={advForm.worker_id} onValueChange={(v) => setAdvForm(p => ({...p, worker_id: v ?? ""}))}>
                 <SelectTrigger><SelectValue placeholder="Zgjidh punonjësin..." /></SelectTrigger>
                 <SelectContent>{workers.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.first_name} {w.last_name}</SelectItem>)}</SelectContent>
               </Select>

@@ -12,6 +12,56 @@ export type BusinessType =
   | "production"
   | "customs_distribution"
 
+// ─── Industry-specific Roles ────────────────────────────────────
+export const INDUSTRY_ROLES: Record<BusinessType, { id: string; name: string; permissions: string[] }[]> = {
+  all: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+  ],
+  market: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "seller", name: "Shitës / Arkëtar", permissions: ["sales", "tables", "products"] },
+    { id: "commercialist", name: "Komercialist / Blerje", permissions: ["purchases", "suppliers", "stock", "consumption"] },
+    { id: "manager", name: "Menaxher i Dyqanit", permissions: ["*"] },
+  ],
+  gastronomy: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "waiter", name: "Kamerier/e", permissions: ["tables", "orders"] },
+    { id: "hall_manager", name: "Menaxher i Sallës", permissions: ["tables", "orders", "sales", "staff", "reports"] },
+    { id: "bartender", name: "Barmen/e", permissions: ["tables", "orders", "products"] },
+    { id: "chef", name: "Kuzhinier/e", permissions: ["orders", "consumption", "products"] },
+    { id: "cashier", name: "Arkëtar/e", permissions: ["sales", "tables", "orders"] },
+  ],
+  rent_a_car: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "agent", name: "Agjent / Shitës", permissions: ["rent-a-car", "clients", "sales"] },
+    { id: "manager", name: "Menaxher", permissions: ["*"] },
+  ],
+  hotel: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "receptionist", name: "Recepsionist/e", permissions: ["hotel", "clients", "sales"] },
+    { id: "housekeeping", name: "Mirëmbajtëse", permissions: ["hotel"] },
+    { id: "manager", name: "Menaxher i Hotelit", permissions: ["*"] },
+  ],
+  auto_service: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "mechanic", name: "Mekanik", permissions: ["auto-service", "products"] },
+    { id: "parts_manager", name: "Menaxher i Pjesëve", permissions: ["products", "purchases", "suppliers", "consumption"] },
+    { id: "service_advisor", name: "Këshilltar Servisi", permissions: ["auto-service", "clients", "sales"] },
+  ],
+  production: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "production_manager", name: "Menaxher Prodhimi", permissions: ["production", "products", "consumption", "reports"] },
+    { id: "warehouse", name: "Magazinier", permissions: ["products", "purchases", "consumption"] },
+    { id: "quality", name: "Kontrollor Cilësie", permissions: ["production", "reports"] },
+  ],
+  customs_distribution: [
+    { id: "owner", name: "Pronari / Administratori", permissions: ["*"] },
+    { id: "customs_agent", name: "Agjent Doganor", permissions: ["customs", "sales", "purchases"] },
+    { id: "distributor", name: "Distributor", permissions: ["sales", "clients", "products"] },
+    { id: "warehouse", name: "Magazinier", permissions: ["products", "purchases", "consumption"] },
+  ],
+}
+
 interface IndustryConfig {
   id: BusinessType
   name: string
@@ -83,17 +133,26 @@ interface BusinessModeContextType {
   businessType: BusinessType
   setBusinessType: (type: BusinessType) => void
   currentIndustry: IndustryConfig
+  userRole: string
+  setUserRole: (role: string) => void
+  hasPermission: (module: string) => boolean
+  currentRoles: { id: string; name: string; permissions: string[] }[]
 }
 
 const BusinessModeContext = createContext<BusinessModeContextType | undefined>(undefined)
 
 export function BusinessModeProvider({ children }: { children: React.ReactNode }) {
   const [businessType, setBusinessTypeState] = useState<BusinessType>("market")
+  const [userRole, setUserRoleState] = useState<string>("owner")
 
   useEffect(() => {
     const saved = localStorage.getItem("agoni_business_type") as BusinessType
     if (saved && INDUSTRIES.some(i => i.id === saved)) {
       setBusinessTypeState(saved)
+    }
+    const savedRole = localStorage.getItem("agoni_user_role")
+    if (savedRole) {
+      setUserRoleState(savedRole)
     }
   }, [])
 
@@ -102,10 +161,32 @@ export function BusinessModeProvider({ children }: { children: React.ReactNode }
     localStorage.setItem("agoni_business_type", type)
   }
 
+  const setUserRole = (role: string) => {
+    setUserRoleState(role)
+    localStorage.setItem("agoni_user_role", role)
+  }
+
   const currentIndustry = INDUSTRIES.find(i => i.id === businessType) || INDUSTRIES[1]
+  const currentRoles = INDUSTRY_ROLES[businessType] || INDUSTRY_ROLES.market
+  
+  const hasPermission = (module: string): boolean => {
+    if (userRole === "owner" || userRole === "manager") return true
+    const roleConfig = currentRoles.find(r => r.id === userRole)
+    if (!roleConfig) return true
+    if (roleConfig.permissions.includes("*")) return true
+    return roleConfig.permissions.includes(module)
+  }
 
   return (
-    <BusinessModeContext.Provider value={{ businessType, setBusinessType, currentIndustry }}>
+    <BusinessModeContext.Provider value={{ 
+      businessType, 
+      setBusinessType, 
+      currentIndustry,
+      userRole,
+      setUserRole,
+      hasPermission,
+      currentRoles
+    }}>
       {children}
     </BusinessModeContext.Provider>
   )
