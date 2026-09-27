@@ -37,6 +37,7 @@ ALTER TABLE public.restaurant_tables
 -- 5. RLS Policies for table_orders
 ALTER TABLE public.table_orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own table orders" ON public.table_orders;
 CREATE POLICY "Users can manage their own table orders"
   ON public.table_orders
   FOR ALL
