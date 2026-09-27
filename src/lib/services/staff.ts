@@ -8,7 +8,7 @@ export interface Worker {
   last_name: string
   username: string
   password_hash?: string
-  role: 'seller' | 'commercialist' | 'manager'
+  role: string
   shift_start_time?: string
   shift_end_time?: string
   work_days?: string

@@ -24,13 +24,56 @@ import {
   Lock,
   CheckCircle2,
   XCircle,
-  Briefcase
+  Briefcase,
+  Sparkles
 } from "lucide-react"
 import { StaffService, Worker, WorkerShift } from "@/lib/services/staff"
 import { createClient } from "@/utils/supabase/client"
+import { useBusinessMode, INDUSTRY_ROLES, BusinessType } from "@/components/business-mode-provider"
+
+// Rich dictionary of industry-specific roles with Albanian labels & badge colors
+export const ROLE_METADATA: Record<string, { label: string; description: string; badgeColor: string }> = {
+  // Gastronomy
+  waiter: { label: "Kamerier/e", description: "Qasje te tavolinat live, porositë dhe faturat", badgeColor: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
+  hall_manager: { label: "Menaxher Salle", description: "Menaxhimi i tavolinave, stafit dhe raporteve", badgeColor: "bg-purple-500/10 text-purple-500 border-purple-500/30" },
+  bartender: { label: "Barmen/e", description: "Porositë e barit dhe pijet", badgeColor: "bg-indigo-500/10 text-indigo-500 border-indigo-500/30" },
+  chef: { label: "Kuzhinier/e", description: "Përgatitja e porosive dhe konsumi i produkteve", badgeColor: "bg-orange-500/10 text-orange-500 border-orange-500/30" },
+  cashier: { label: "Arkëtar/e", description: "Arkëtimi i faturave dhe mbyllja e arkës", badgeColor: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" },
+  // Market
+  seller: { label: "Shitës / Arkëtar", description: "Qasje në POS me barkod dhe shitjet", badgeColor: "bg-blue-500/10 text-blue-500 border-blue-500/30" },
+  commercialist: { label: "Komercialist / Blerje", description: "Blerjet, faturat hyrëse dhe furnitorët", badgeColor: "bg-violet-500/10 text-violet-500 border-violet-500/30" },
+  manager: { label: "Menaxher", description: "Qasje e plotë menaxheriale në të gjitha modulet", badgeColor: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" },
+  // Rent a car
+  agent: { label: "Agjent Qiraje / Shitës", description: "Flota e veturave, kontratat e qirasë dhe klientët", badgeColor: "bg-sky-500/10 text-sky-500 border-sky-500/30" },
+  // Hotel
+  receptionist: { label: "Recepsionist/e", description: "Dhomat e hotelit, check-in / out dhe rezervimet", badgeColor: "bg-indigo-500/10 text-indigo-500 border-indigo-500/30" },
+  housekeeping: { label: "Mirëmbajtëse", description: "Pastrimi dhe statusi i dhomave", badgeColor: "bg-teal-500/10 text-teal-500 border-teal-500/30" },
+  // Auto Service
+  mechanic: { label: "Mekanik", description: "Urdhëresat e punës, servisimi dhe pjesët", badgeColor: "bg-rose-500/10 text-rose-500 border-rose-500/30" },
+  service_advisor: { label: "Këshilltar Servisi", description: "Pranimi i automjeteve dhe klientët", badgeColor: "bg-cyan-500/10 text-cyan-500 border-cyan-500/30" },
+  parts_manager: { label: "Menaxher i Pjesëve", description: "Inventari i pjesëve të këmbimit dhe blerjet", badgeColor: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
+  // Production
+  production_manager: { label: "Menaxher Prodhimi", description: "Normativat BOM, procesi i prodhimit dhe raportet", badgeColor: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/30" },
+  warehouse: { label: "Magazinier", description: "Pranimi dhe shpërndarja e mallit nga magazina", badgeColor: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30" },
+  quality: { label: "Kontrollor Cilësie", description: "Verifikimi i cilësisë së prodhimit", badgeColor: "bg-pink-500/10 text-pink-500 border-pink-500/30" },
+  // Customs
+  customs_agent: { label: "Agjent Doganor", description: "Deklaratat DUD dhe procedurat doganore", badgeColor: "bg-blue-600/10 text-blue-600 border-blue-600/30" },
+  distributor: { label: "Distributor", description: "Dërgesat me shumicë dhe faturimi", badgeColor: "bg-teal-600/10 text-teal-600 border-teal-600/30" },
+}
+
+const getDefaultRole = (bType: BusinessType): string => {
+  if (bType === "gastronomy") return "waiter"
+  if (bType === "auto_service") return "mechanic"
+  if (bType === "hotel") return "receptionist"
+  if (bType === "rent_a_car") return "agent"
+  if (bType === "production") return "production_manager"
+  if (bType === "customs_distribution") return "customs_agent"
+  return "seller"
+}
 
 export default function StaffManagementPage() {
   const { t } = useTranslation()
+  const { businessType, currentIndustry } = useBusinessMode()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [activeShifts, setActiveShifts] = useState<WorkerShift[]>([])
   const [todaySales, setTodaySales] = useState<Record<string, { count: number; total: number; worker_name: string }>>({})
@@ -48,7 +91,7 @@ export default function StaffManagementPage() {
     last_name: "",
     username: "",
     password_hash: "",
-    role: "seller" as "seller" | "commercialist" | "manager",
+    role: "seller",
     shift_start_time: "",
     shift_end_time: "",
     work_days: "",
@@ -101,7 +144,7 @@ export default function StaffManagementPage() {
       last_name: "",
       username: "",
       password_hash: "",
-      role: "seller",
+      role: getDefaultRole(businessType),
       shift_start_time: "",
       shift_end_time: "",
       work_days: "",
@@ -187,16 +230,16 @@ export default function StaffManagementPage() {
   }
 
   const getRoleBadge = (role: string) => {
-    switch (role) {
-      case "seller":
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">{t("role_seller")}</span>
-      case "commercialist":
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-500 border border-purple-500/20">{t("role_commercialist")}</span>
-      case "manager":
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">{t("role_manager")}</span>
-      default:
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">{role}</span>
+    const meta = ROLE_METADATA[role] || { 
+      label: role, 
+      description: "", 
+      badgeColor: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" 
     }
+    return (
+      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${meta.badgeColor}`}>
+        {meta.label}
+      </span>
+    )
   }
 
   return (
@@ -207,12 +250,16 @@ export default function StaffManagementPage() {
           <div className="flex items-center space-x-2 text-primary font-bold text-sm tracking-widest uppercase">
             <Users className="w-4 h-4" />
             <span>{t("staff_mgmt")}</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
+              {currentIndustry?.name || "Administrator"}
+            </span>
           </div>
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
             {t("workers")}
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl">
-            Menaxhoni punëtorët, caktoni rolet (shitës, komercialist), oraret dhe monitoroni shitjet në kohë reale.
+            Si <b>Administrator</b>, shtoni punëtorët dhe caktoni rolet përkatëse (kamerier, arkëtar, mekanik, recepsionist) sipas profilit të biznesit tuaj.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -493,7 +540,7 @@ export default function StaffManagementPage() {
                 {editingWorker ? "Ndrysho të Dhënat e Punëtorit" : t("add_worker")}
               </DialogTitle>
               <DialogDescription>
-                Caktoni emrin, përdoruesin, fjalëkalimin dhe rolin e punëtorit në sistem.
+                Si Administrator, caktoni rolin dhe lejet operative të punëtorit për profilin <b>{currentIndustry?.name || "e biznesit"}</b>.
               </DialogDescription>
             </DialogHeader>
 
@@ -546,7 +593,12 @@ export default function StaffManagementPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground px-1">{t("role")} *</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase text-muted-foreground px-1">{t("role")} *</label>
+                  <span className="text-[11px] text-primary font-bold">
+                    Profili: {currentIndustry?.name || "Standard"}
+                  </span>
+                </div>
                 <Select
                   value={formData.role}
                   onValueChange={(val) => {
@@ -554,20 +606,47 @@ export default function StaffManagementPage() {
                   }}
                 >
                   <SelectTrigger className="h-11 bg-background/50 rounded-xl font-bold">
-                    <SelectValue placeholder={t("role")} />
+                    <SelectValue placeholder={t("role")}>
+                      {ROLE_METADATA[formData.role]?.label || formData.role}
+                    </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="glass">
-                    <SelectItem value="seller" className="font-bold">
-                      {t("role_seller")} — Qasje vetëm në POS & Shitje
-                    </SelectItem>
-                    <SelectItem value="commercialist" className="font-bold">
-                      {t("role_commercialist")} — Qasje në Blerje & Fatura Hyrëse
-                    </SelectItem>
-                    <SelectItem value="manager" className="font-bold">
-                      {t("role_manager")} — Qasje e Plotë Menaxheriale
-                    </SelectItem>
+                  <SelectContent className="glass max-h-72">
+                    <div className="px-2 py-1.5 text-[10px] font-black uppercase text-primary tracking-wider">
+                      ★ Rolet e rekomanduara për {currentIndustry?.name || "Këtë Industri"}
+                    </div>
+                    {((INDUSTRY_ROLES[businessType] || INDUSTRY_ROLES.market).filter(r => r.id !== "owner")).map(r => {
+                      const meta = ROLE_METADATA[r.id]
+                      return (
+                        <SelectItem key={r.id} value={r.id} className="py-2 cursor-pointer">
+                          <div className="text-left">
+                            <div className="font-bold text-sm text-foreground">{meta?.label || r.name}</div>
+                            <div className="text-[11px] text-muted-foreground font-normal">{meta?.description || ""}</div>
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+
+                    <div className="border-t border-border/50 my-1" />
+                    <div className="px-2 py-1.5 text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                      Rolet e Tjera të Sistemit
+                    </div>
+                    {Object.entries(ROLE_METADATA)
+                      .filter(([id]) => !((INDUSTRY_ROLES[businessType] || INDUSTRY_ROLES.market).some(r => r.id === id)) && id !== "owner")
+                      .map(([id, meta]) => (
+                        <SelectItem key={id} value={id} className="py-2 cursor-pointer">
+                          <div className="text-left">
+                            <div className="font-bold text-sm text-foreground">{meta.label}</div>
+                            <div className="text-[11px] text-muted-foreground font-normal">{meta.description}</div>
+                          </div>
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
+                {ROLE_METADATA[formData.role] && (
+                  <p className="text-[11px] text-muted-foreground px-1">
+                    ℹ️ <b>Qasja:</b> {ROLE_METADATA[formData.role].description}
+                  </p>
+                )}
               </div>
 
               {/* Work Schedule (Non-mandatory / Optional as explicitly requested) */}

@@ -48,3 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_table_orders_table_id ON public.table_orders(tabl
 CREATE INDEX IF NOT EXISTS idx_table_orders_user_id ON public.table_orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_table_orders_status ON public.table_orders(status);
 CREATE INDEX IF NOT EXISTS idx_sales_payment_method ON public.sales(payment_method);
+
+-- 7. Allow industry-specific roles for workers (remove strict check if exists)
+ALTER TABLE public.workers DROP CONSTRAINT IF EXISTS workers_role_check;
+

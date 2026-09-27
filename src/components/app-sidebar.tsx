@@ -77,6 +77,85 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
       { name: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText },
       { name: t("products"), href: "/dashboard/products", icon: Briefcase },
     ]
+  } else if (effectiveRole === 'waiter') {
+    navItems = [
+      { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+      { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+    ]
+  } else if (effectiveRole === 'bartender') {
+    navItems = [
+      { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+    ]
+  } else if (effectiveRole === 'chef') {
+    navItems = [
+      { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+      { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+    ]
+  } else if (effectiveRole === 'cashier') {
+    navItems = [
+      { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+      { name: t("sales"), href: "/dashboard/sales", icon: Users },
+    ]
+  } else if (effectiveRole === 'mechanic') {
+    navItems = [
+      { name: "Urdhëresat e Servisit", href: "/dashboard/auto-service", icon: Wrench },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+    ]
+  } else if (effectiveRole === 'service_advisor') {
+    navItems = [
+      { name: "Urdhëresat e Servisit", href: "/dashboard/auto-service", icon: Wrench },
+      { name: t("clients"), href: "/dashboard/clients", icon: Users },
+      { name: t("sales"), href: "/dashboard/sales", icon: Users },
+    ]
+  } else if (effectiveRole === 'parts_manager') {
+    navItems = [
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+      { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+      { name: t("suppliers"), href: "/dashboard/suppliers", icon: Truck },
+    ]
+  } else if (effectiveRole === 'agent') {
+    navItems = [
+      { name: "Flota e Veturave", href: "/dashboard/rent-a-car", icon: Car },
+      { name: t("clients"), href: "/dashboard/clients", icon: Users },
+      { name: t("sales"), href: "/dashboard/sales", icon: Users },
+    ]
+  } else if (effectiveRole === 'receptionist') {
+    navItems = [
+      { name: "Dhomat e Hotelit", href: "/dashboard/hotel", icon: Building2 },
+      { name: t("clients"), href: "/dashboard/clients", icon: Users },
+      { name: t("sales"), href: "/dashboard/sales", icon: Users },
+    ]
+  } else if (effectiveRole === 'housekeeping') {
+    navItems = [
+      { name: "Dhomat e Hotelit", href: "/dashboard/hotel", icon: Building2 },
+    ]
+  } else if (effectiveRole === 'production_manager') {
+    navItems = [
+      { name: "Normativat & Recetat", href: "/dashboard/production", icon: Factory },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+      { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+    ]
+  } else if (effectiveRole === 'warehouse') {
+    navItems = [
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+      { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+      { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
+    ]
+  } else if (effectiveRole === 'customs_agent') {
+    navItems = [
+      { name: "Dogana & DUD", href: "/dashboard/customs", icon: Globe },
+      { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+    ]
+  } else if (effectiveRole === 'hall_manager') {
+    navItems = [
+      { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+      { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+      { name: t("sales"), href: "/dashboard/sales", icon: Users },
+      { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+    ]
   } else {
     // Dynamic navigation based on the Selected Business Industry
     if (businessType === "rent_a_car") {
