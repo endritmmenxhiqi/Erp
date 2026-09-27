@@ -47,9 +47,11 @@ export default function OrdersPage() {
   const [isListening, setIsListening] = useState(false)
 
   // Order Form
+  const [activeTab, setActiveTab] = useState<string>("Të gjitha")
+  const [printOrder, setPrintOrder] = useState<Order | null>(null)
   const [formData, setFormData] = useState({
-    order_number: `OF-${Date.now().toString().slice(-6)}`,
-    order_type: "Oferte" as "Oferte" | "Porosi" | "Proforme",
+    order_number: `PROF-${Date.now().toString().slice(-6)}`,
+    order_type: "Proforme" as "Oferte" | "Porosi" | "Proforme",
     client_name: "",
     client_phone: "",
     total_amount: 0,
@@ -264,10 +266,15 @@ export default function OrdersPage() {
     }
   }
 
-  const filtered = orders.filter(o => 
-    o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.client_name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filtered = orders.filter(o => {
+    const matchesSearch = o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.client_name.toLowerCase().includes(searchTerm.toLowerCase())
+    if (activeTab === "Të gjitha") return matchesSearch
+    if (activeTab === "Pro-Fatura") return matchesSearch && o.order_type === "Proforme"
+    if (activeTab === "Oferta") return matchesSearch && o.order_type === "Oferte"
+    if (activeTab === "Porosi") return matchesSearch && o.order_type === "Porosi"
+    return matchesSearch
+  })
 
   return (
     <div className="space-y-6">
@@ -275,23 +282,53 @@ export default function OrdersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Ofertat & Porositë</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Pro-Faturat, Ofertat & Porositë</h1>
             <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> AI Voice & Text
+              <Sparkles className="w-3 h-3" /> Pro-Forma & AI
             </span>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Gjeneroni proforma dhe oferta me zë ose tekst dhe konvertojini në fatura me 1 klik.
+            Gjeneroni pro-fatura zyrtare me IBAN bankar dhe oferta, dhe konvertojini në fatura fiskale me 1 klik.
           </p>
         </div>
 
-        <Button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Krijo Ofertë / Porosi të Re
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            onClick={() => {
+              setFormData({
+                order_number: `PROF-${Date.now().toString().slice(-6)}`,
+                order_type: "Proforme",
+                client_name: "",
+                client_phone: "",
+                total_amount: 0,
+                delivery_date: "",
+                notes: ""
+              })
+              setIsModalOpen(true)
+            }}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Krijo Pro-Faturë të Re
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs Filter */}
+      <div className="flex items-center space-x-2 border-b border-border pb-3 overflow-x-auto">
+        {["Të gjitha", "Pro-Fatura", "Oferta", "Porosi"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              activeTab === tab
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "bg-card hover:bg-accent text-muted-foreground hover:text-foreground border border-border"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {/* AI Voice Assistant Quick Box */}
@@ -302,11 +339,11 @@ export default function OrdersPage() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              Porosi me Zë nga Telefoni ose Desktopi
+              Krijim me Zë nga Telefoni ose Kompjuteri
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-primary/20 text-primary font-bold">Fast POS</span>
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Flisni ose shkruani natyrshëm (p.sh. <i>"Ofertë për 10 thasë cement me 5 euro për Arbenin"</i>)
+              Flisni në shqip (p.sh. <i>"Pro-faturë për kompaninë Albi 50 pako vaj me 1.20 euro"</i>)
             </p>
           </div>
         </div>
@@ -327,7 +364,7 @@ export default function OrdersPage() {
             }}
             className="bg-blue-600 hover:bg-blue-500 text-white"
           >
-            Hap Krijuesin
+            Hap Formularin
           </Button>
         </div>
       </div>
@@ -336,7 +373,7 @@ export default function OrdersPage() {
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input 
-          placeholder="Kërko me numër oferte ose emër klienti..." 
+          placeholder="Kërko me numër dokumenti ose emër klienti..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 h-11 bg-card/80 border-border rounded-xl"
@@ -350,8 +387,8 @@ export default function OrdersPage() {
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
             <ClipboardList className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-foreground font-semibold">Nuk u gjet asnjë ofertë apo porosi</p>
-            <p className="text-muted-foreground text-xs mt-1">Krijoni ofertën e parë për ta dërguar tek klienti.</p>
+            <p className="text-foreground font-semibold">Nuk u gjet asnjë dokument</p>
+            <p className="text-muted-foreground text-xs mt-1">Krijoni pro-faturën ose ofertën e parë për klientin.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -374,8 +411,12 @@ export default function OrdersPage() {
                       {ord.order_number}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                        {ord.order_type}
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                        ord.order_type === "Proforme" 
+                          ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
+                          : "bg-primary/10 text-primary border-primary/20"
+                      }`}>
+                        {ord.order_type === "Proforme" ? "Pro-Faturë" : ord.order_type}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-foreground">
@@ -401,15 +442,27 @@ export default function OrdersPage() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end space-x-1.5">
+                        {/* Print Pro-Forma / Order */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPrintOrder(ord)}
+                          className="h-8 text-xs border-border"
+                          title="Printo Pro-Faturë A4"
+                        >
+                          <Printer className="w-3.5 h-3.5 mr-1" />
+                          Printo
+                        </Button>
+
                         {ord.status !== "Faturuar" && (
                           <Button
                             size="sm"
                             onClick={() => handleConvertToSale(ord)}
                             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-xs"
-                            title="Konverto në Faturë / Shitje"
+                            title="Konverto në Faturë Fiskale"
                           >
                             <FileCheck className="w-3.5 h-3.5 mr-1" />
-                            Konverto në Faturë
+                            Fiskalizo
                           </Button>
                         )}
                         <button
@@ -427,6 +480,107 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      {/* A4 Printable Pro-Forma / Order Invoice Modal */}
+      {printOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-white text-zinc-900 w-full max-w-2xl rounded-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-200">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-zinc-500 font-bold">Dokument Operativ</span>
+                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">
+                  {printOrder.order_type === "Proforme" ? "PRO-FATURË (PROFORMA INVOICE)" : "OFERTË ZYRTARE"}
+                </h2>
+                <div className="font-mono text-sm text-blue-600 font-bold mt-0.5">#{printOrder.order_number}</div>
+              </div>
+              <div className="text-right text-xs text-zinc-500">
+                <div>Data: {new Date(printOrder.created_at).toLocaleDateString()}</div>
+                <div>Afati: 15 Ditë</div>
+              </div>
+            </div>
+
+            {/* Seller & Buyer Info */}
+            <div className="grid grid-cols-2 gap-6 my-6 text-xs">
+              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                <div className="font-bold uppercase tracking-wider text-zinc-400 text-[10px] mb-1">Lëshuesi:</div>
+                <div className="font-black text-sm text-zinc-900">Agoni ERP Biznes Sh.p.k</div>
+                <div className="text-zinc-600 mt-1">Nr. Fiskal: 600123456</div>
+                <div className="text-zinc-600">IBAN: XK05 1000 0000 1234 5678</div>
+                <div className="text-zinc-600">Banka: TEB / ProCredit Kosovë</div>
+              </div>
+              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                <div className="font-bold uppercase tracking-wider text-zinc-400 text-[10px] mb-1">Blerësi / Klienti:</div>
+                <div className="font-black text-sm text-zinc-900">{printOrder.client_name}</div>
+                {printOrder.client_phone && <div className="text-zinc-600 mt-1">Tel: {printOrder.client_phone}</div>}
+                <div className="text-zinc-600">Statusi: {printOrder.status}</div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <div className="rounded-xl border border-zinc-200 overflow-hidden my-6">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-100 text-zinc-600 font-semibold border-b border-zinc-200">
+                  <tr>
+                    <th className="py-2.5 px-3">Përshkrimi i Mallit / Shërbimit</th>
+                    <th className="py-2.5 px-3 text-right">Shuma (€)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  <tr>
+                    <td className="py-3 px-3 font-medium">
+                      {printOrder.notes || "Artikujt sipas marrëveshjes së pro-faturës"}
+                    </td>
+                    <td className="py-3 px-3 text-right font-bold">
+                      €{Number(printOrder.total_amount).toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals */}
+            <div className="flex justify-end my-4">
+              <div className="w-64 space-y-1.5 text-xs">
+                <div className="flex justify-between text-zinc-500">
+                  <span>Nëntotali pa TVSH:</span>
+                  <span>€{(Number(printOrder.total_amount) / 1.18).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-500">
+                  <span>TVSH (18%):</span>
+                  <span>€{(Number(printOrder.total_amount) - (Number(printOrder.total_amount) / 1.18)).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-black text-sm text-zinc-900 pt-2 border-t border-zinc-200">
+                  <span>TOTALI PËR PAGESË:</span>
+                  <span>€{Number(printOrder.total_amount).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notice */}
+            <div className="p-3 rounded-lg bg-zinc-100 text-[11px] text-zinc-600 mt-4 leading-relaxed">
+              ⚠️ <b>Kujtesë Ligjore:</b> Kjo Pro-Faturë shërben si bazë për pagesë në llogarinë bankare të specifikuar më sipër. Fatura zyrtare tatimore/fiskale lëshohet automatikisht pas konfirmimit të pagesës.
+            </div>
+
+            {/* Modal Controls */}
+            <div className="flex items-center justify-end space-x-2 pt-6 border-t border-zinc-200 mt-6 print:hidden">
+              <Button
+                variant="outline"
+                onClick={() => setPrintOrder(null)}
+                className="text-zinc-700 border-zinc-300"
+              >
+                Mbyll
+              </Button>
+              <Button
+                onClick={() => window.print()}
+                className="bg-zinc-900 hover:bg-zinc-800 text-white"
+              >
+                <Printer className="w-4 h-4 mr-1.5" />
+                Printo A4 / Ruaj PDF
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Krijimi Ofertë / Porosi me AI */}
       {isModalOpen && (
