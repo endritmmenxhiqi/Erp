@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/language-provider";
 import { AuthProvider } from "@/components/auth-provider";
+import { BusinessModeProvider } from "@/components/business-mode-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
@@ -45,9 +46,11 @@ export default function RootLayout({
         >
           <AuthProvider>
             <LanguageProvider>
-              {children}
-              {/* Toaster do të shfaqë njoftimet (toasts) në të gjitha faqet */}
-              <Toaster position="top-center" richColors />
+              <BusinessModeProvider>
+                {children}
+                {/* Toaster do të shfaqë njoftimet (toasts) në të gjitha faqet */}
+                <Toaster position="top-center" richColors />
+              </BusinessModeProvider>
             </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -24,6 +24,7 @@ import {
 import { ThemeToggle } from "./theme-toggle"
 import { LanguageToggle } from "./language-toggle"
 import { useTranslation } from "@/components/language-provider"
+import { IndustrySelector } from "./industry-selector"
 import { StaffService, Worker } from "@/lib/services/staff"
 
 interface MobileNavProps {
@@ -87,23 +88,22 @@ export function MobileNav({ email, role, signOutAction }: MobileNavProps) {
   return (
     <div className="md:hidden print:hidden">
       {/* Top Mobile Bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-md border-b border-border shadow-xs">
-        <Link href="/dashboard" className="flex items-center space-x-2.5">
+      <header className="sticky top-0 z-40 flex items-center justify-between px-3 py-2.5 bg-background/95 backdrop-blur-md border-b border-border shadow-xs">
+        <Link href="/dashboard" className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <span className="font-bold text-base tracking-tight">Agoni ERP</span>
-            <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-semibold bg-primary/10 text-primary rounded-full">AI Mobile</span>
+            <span className="font-bold text-sm tracking-tight">Agoni ERP</span>
           </div>
         </Link>
 
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center space-x-1">
+          <IndustrySelector />
           <ThemeToggle />
-          <LanguageToggle />
           <button
             onClick={() => setIsOpen(true)}
-            className="p-2 rounded-xl text-foreground hover:bg-accent/60 transition-colors"
+            className="p-1.5 rounded-xl text-foreground hover:bg-accent/60 transition-colors"
             aria-label="Hap menunë"
           >
             <Menu className="w-5 h-5" />

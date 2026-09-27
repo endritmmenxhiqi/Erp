@@ -17,13 +17,20 @@ import {
   Truck,
   ClipboardList,
   UtensilsCrossed,
-  Sparkles
+  Sparkles,
+  Car,
+  Building2,
+  Wrench,
+  Factory,
+  Globe
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ThemeToggle } from "./theme-toggle"
 import { LanguageToggle } from "./language-toggle"
 import { useTranslation } from "@/components/language-provider"
+import { useBusinessMode } from "./business-mode-provider"
+import { IndustrySelector } from "./industry-selector"
 import { StaffService, Worker } from "@/lib/services/staff"
 import type { LucideIcon } from "lucide-react"
 
@@ -37,6 +44,7 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
+  const { businessType, currentIndustry } = useBusinessMode()
   const worker: Worker | null = typeof window === "undefined" ? null : StaffService.getCurrentWorker()
   const isImpersonatingBusiness = typeof window !== "undefined" && Boolean(
       sessionStorage.getItem("impersonated_business_id") ||
@@ -60,40 +68,116 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
       { name: t("settings"), href: "/admin/settings", icon: Settings },
     ]
   } else if (effectiveRole === 'seller') {
-    // Seller only has POS & Sales section
     navItems = [
       { name: t("sales"), href: "/dashboard/sales", icon: Users },
     ]
   } else if (effectiveRole === 'commercialist') {
-    // Commercialist only has Purchases & Invoicing & Products
     navItems = [
       { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
       { name: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText },
       { name: t("products"), href: "/dashboard/products", icon: Briefcase },
     ]
   } else {
-    // Business Super Admin / Owner / Manager has full access
-    navItems = [
-      { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
-      { name: t("sales"), href: "/dashboard/sales", icon: Users },
-      { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
-      { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
-      { name: t("clients"), href: "/dashboard/clients", icon: Users },
-      { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
-      { name: t("suppliers"), href: "/dashboard/suppliers", icon: Truck },
-      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
-      { name: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText },
-      { name: t("sales_book"), href: "/dashboard/sales-book", icon: FileText },
-      { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
-      { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
-      { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
-    ]
+    // Dynamic navigation based on the Selected Business Industry
+    if (businessType === "rent_a_car") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: "Flota e Veturave", href: "/dashboard/rent-a-car", icon: Car },
+        { name: t("clients"), href: "/dashboard/clients", icon: Users },
+        { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else if (businessType === "hotel") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: "Dhomat e Hotelit", href: "/dashboard/hotel", icon: Building2 },
+        { name: t("clients"), href: "/dashboard/clients", icon: Users },
+        { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else if (businessType === "auto_service") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: "Urdhëresat e Servisit", href: "/dashboard/auto-service", icon: Wrench },
+        { name: t("clients"), href: "/dashboard/clients", icon: Users },
+        { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else if (businessType === "production") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: "Normativat & Recetat", href: "/dashboard/production", icon: Factory },
+        { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("consumption"), href: "/dashboard/consumption", icon: Settings },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else if (businessType === "customs_distribution") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: "Dogana & DUD", href: "/dashboard/customs", icon: Globe },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+        { name: t("suppliers"), href: "/dashboard/suppliers", icon: Truck },
+        { name: t("sales"), href: "/dashboard/sales", icon: Users },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else if (businessType === "gastronomy") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+        { name: t("sales"), href: "/dashboard/sales", icon: Users },
+        { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else if (businessType === "market") {
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: t("sales"), href: "/dashboard/sales", icon: Users },
+        { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+        { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+        { name: t("clients"), href: "/dashboard/clients", icon: Users },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("suppliers"), href: "/dashboard/suppliers", icon: Truck },
+        { name: t("sales_book"), href: "/dashboard/sales-book", icon: FileText },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    } else {
+      // "all" - Show every single module
+      navItems = [
+        { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+        { name: t("sales"), href: "/dashboard/sales", icon: Users },
+        { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
+        { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+        { name: "Flota Rent-a-Car", href: "/dashboard/rent-a-car", icon: Car },
+        { name: "Dhomat e Hotelit", href: "/dashboard/hotel", icon: Building2 },
+        { name: "Auto Servis", href: "/dashboard/auto-service", icon: Wrench },
+        { name: "Normativa Prodhim", href: "/dashboard/production", icon: Factory },
+        { name: "Dogana & DUD", href: "/dashboard/customs", icon: Globe },
+        { name: t("clients"), href: "/dashboard/clients", icon: Users },
+        { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
+        { name: t("suppliers"), href: "/dashboard/suppliers", icon: Truck },
+        { name: t("products"), href: "/dashboard/products", icon: Briefcase },
+        { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
+        { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
+      ]
+    }
   }
 
   const handleSignOut = async () => {
     if (worker) {
       StaffService.setCurrentWorker(null)
-      // Clear worker_session cookie
       document.cookie = 'worker_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       router.push("/login")
     } else {
@@ -104,17 +188,22 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
   return (
     <div className="hidden md:flex w-72 h-screen flex-col bg-sidebar dark:bg-[#0a0a0c] border-r border-border sticky top-0 overflow-hidden print:hidden">
       {/* Brand */}
-      <div className="p-8">
-        <div className="flex items-center space-x-3 group cursor-pointer">
+      <div className="p-6 pb-2">
+        <div className="flex items-center space-x-3 group cursor-pointer mb-3">
           <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform">
             <Rocket className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <div className="text-lg font-bold text-foreground tracking-tight leading-none group-hover:text-primary transition-colors">{t("dashboard")}</div>
+            <div className="text-lg font-bold text-foreground tracking-tight leading-none group-hover:text-primary transition-colors">Agoni ERP</div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1">
               {worker ? `${worker.first_name} ${worker.last_name}` : t("business_dashboard")}
             </div>
           </div>
+        </div>
+
+        {/* Industry Selector Widget in Sidebar */}
+        <div className="pt-2">
+          <IndustrySelector />
         </div>
       </div>
 

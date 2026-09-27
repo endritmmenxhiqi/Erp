@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslation } from "@/components/language-provider"
+import { useBusinessMode } from "@/components/business-mode-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StaffService } from "@/lib/services/staff"
 import { 
@@ -24,7 +25,12 @@ import {
   UtensilsCrossed,
   AlertTriangle,
   Lightbulb,
-  ArrowRight
+  ArrowRight,
+  Car,
+  Building2,
+  Wrench,
+  Factory,
+  Globe
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
@@ -43,6 +49,7 @@ interface Profile {
 
 export default function DashboardPage() {
   const { t } = useTranslation()
+  const { businessType, currentIndustry } = useBusinessMode()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [aiAdvisor, setAiAdvisor] = useState<any>({
@@ -59,20 +66,47 @@ export default function DashboardPage() {
   })
   const supabase = createClient()
   
-  const menuItems = [
-    { title: t("sales"), href: "/dashboard/sales", icon: Users, tone: "text-emerald-500", badge: "POS" },
-    { title: t("orders"), href: "/dashboard/orders", icon: ClipboardList, tone: "text-blue-500", badge: "AI Voice" },
-    { title: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed, tone: "text-amber-500", badge: "Live" },
-    { title: t("clients"), href: "/dashboard/clients", icon: Users, tone: "text-cyan-500", badge: "CRM" },
-    { title: t("purchases"), href: "/dashboard/purchases", icon: Rocket, tone: "text-indigo-500", badge: "AI OCR" },
-    { title: t("suppliers"), href: "/dashboard/suppliers", icon: Truck, tone: "text-purple-500" },
-    { title: t("products"), href: "/dashboard/products", icon: Package, tone: "text-violet-500" },
-    { title: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText, tone: "text-orange-500" },
-    { title: t("sales_book"), href: "/dashboard/sales-book", icon: FileText, tone: "text-sky-500" },
-    { title: t("reports"), href: "/dashboard/reports", icon: BarChart3, tone: "text-rose-500" },
-    { title: t("consumption"), href: "/dashboard/consumption", icon: Settings, tone: "text-zinc-500" },
-    { title: t("staff_mgmt"), href: "/dashboard/staff", icon: UserCog, tone: "text-indigo-400" },
-  ]
+  // All industry modules registry
+  const allModules = {
+    sales: { title: t("sales"), href: "/dashboard/sales", icon: Users, tone: "text-emerald-500", badge: "POS" },
+    orders: { title: "Pro-faturat & Ofertat", href: "/dashboard/orders", icon: ClipboardList, tone: "text-blue-500", badge: "AI Voice" },
+    tables: { title: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed, tone: "text-amber-500", badge: "Tavolina Live" },
+    rent_a_car: { title: "Flota Rent-a-Car", href: "/dashboard/rent-a-car", icon: Car, tone: "text-sky-500", badge: "Veturat" },
+    hotel: { title: "Dhomat e Hotelit", href: "/dashboard/hotel", icon: Building2, tone: "text-indigo-500", badge: "Check-in" },
+    auto_service: { title: "Auto Servis & Mekanikë", href: "/dashboard/auto-service", icon: Wrench, tone: "text-rose-500", badge: "Urdhëresat" },
+    production: { title: "Normativat & Prodhim", href: "/dashboard/production", icon: Factory, tone: "text-purple-500", badge: "BOM" },
+    customs: { title: "Dogana & Deklaratat DUD", href: "/dashboard/customs", icon: Globe, tone: "text-cyan-500", badge: "Zhdoganim" },
+    clients: { title: t("clients"), href: "/dashboard/clients", icon: Users, tone: "text-cyan-500", badge: "CRM" },
+    purchases: { title: t("purchases"), href: "/dashboard/purchases", icon: Rocket, tone: "text-indigo-500", badge: "AI OCR" },
+    suppliers: { title: t("suppliers"), href: "/dashboard/suppliers", icon: Truck, tone: "text-purple-500", badge: "Partnerë" },
+    products: { title: t("products"), href: "/dashboard/products", icon: Package, tone: "text-violet-500", badge: "Stoku" },
+    purchases_book: { title: t("purchases_book"), href: "/dashboard/purchases-book", icon: FileText, tone: "text-orange-500", badge: "Libri" },
+    sales_book: { title: t("sales_book"), href: "/dashboard/sales-book", icon: FileText, tone: "text-sky-500", badge: "Libri" },
+    reports: { title: t("reports"), href: "/dashboard/reports", icon: BarChart3, tone: "text-rose-500", badge: "Analitika" },
+    consumption: { title: t("consumption"), href: "/dashboard/consumption", icon: Settings, tone: "text-zinc-500", badge: "Shpenzime" },
+    staff: { title: t("staff_mgmt"), href: "/dashboard/staff", icon: UserCog, tone: "text-indigo-400", badge: "Ekipi" },
+  }
+
+  // Filter modules based on selected business industry
+  let menuItems: any[] = []
+  if (businessType === "rent_a_car") {
+    menuItems = [allModules.rent_a_car, allModules.orders, allModules.clients, allModules.purchases, allModules.reports, allModules.staff]
+  } else if (businessType === "hotel") {
+    menuItems = [allModules.hotel, allModules.orders, allModules.clients, allModules.purchases, allModules.reports, allModules.staff]
+  } else if (businessType === "auto_service") {
+    menuItems = [allModules.auto_service, allModules.clients, allModules.products, allModules.purchases, allModules.reports, allModules.staff]
+  } else if (businessType === "production") {
+    menuItems = [allModules.production, allModules.products, allModules.purchases, allModules.consumption, allModules.reports, allModules.staff]
+  } else if (businessType === "customs_distribution") {
+    menuItems = [allModules.customs, allModules.purchases, allModules.products, allModules.suppliers, allModules.sales, allModules.reports, allModules.staff]
+  } else if (businessType === "gastronomy") {
+    menuItems = [allModules.tables, allModules.sales, allModules.products, allModules.purchases, allModules.reports, allModules.staff]
+  } else if (businessType === "market") {
+    menuItems = [allModules.sales, allModules.orders, allModules.products, allModules.clients, allModules.purchases, allModules.suppliers, allModules.sales_book, allModules.reports, allModules.staff]
+  } else {
+    // "all" - Show all
+    menuItems = Object.values(allModules)
+  }
 
   useEffect(() => {
     async function load() {
@@ -109,15 +143,21 @@ export default function DashboardPage() {
   return (
     <div className="space-y-12">
       <div className="flex flex-col space-y-2">
-        <div className="flex items-center space-x-2 text-primary font-bold text-sm tracking-widest uppercase">
-          <Sparkles className="w-4 h-4" />
-          <span>{t("welcome_back")}</span>
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 text-primary font-bold text-sm tracking-widest uppercase">
+            <Sparkles className="w-4 h-4" />
+            <span>{t("welcome_back")}</span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary flex items-center gap-1">
+            <span>{currentIndustry.icon}</span>
+            <span>{currentIndustry.name}</span>
+          </span>
         </div>
-        <h2 className="text-5xl font-extrabold tracking-tight text-foreground leading-tight">
+        <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
           {t("business_dashboard")}
         </h2>
-        <p className="text-muted-foreground text-lg max-w-xl">
-          {t("dashboard_desc")}
+        <p className="text-muted-foreground text-sm sm:text-base max-w-xl">
+          {currentIndustry.description}
         </p>
       </div>
 
@@ -177,8 +217,11 @@ export default function DashboardPage() {
       {/* Grid of All Modules */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-foreground tracking-tight">Modulet e Sistemit</h3>
-          <span className="text-xs text-muted-foreground">12 Module Aktive</span>
+          <h3 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
+            <span>Modulet Operative:</span>
+            <span className="text-primary">{currentIndustry.name}</span>
+          </h3>
+          <span className="text-xs text-muted-foreground">{menuItems.length} Module Aktive</span>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {menuItems.map((item) => {
