@@ -96,7 +96,7 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
   } else if (effectiveRole === 'cashier') {
     navItems = [
       { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
-      { name: t("sales"), href: "/dashboard/sales", icon: Users },
+      { name: t("products"), href: "/dashboard/products", icon: Briefcase },
     ]
   } else if (effectiveRole === 'mechanic') {
     navItems = [
@@ -152,7 +152,6 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
     navItems = [
       { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
       { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList },
-      { name: t("sales"), href: "/dashboard/sales", icon: Users },
       { name: t("staff_mgmt"), href: "/dashboard/staff", icon: Users },
       { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },
     ]
@@ -213,7 +212,6 @@ export function AppSidebar({ email, role, signOutAction }: SidebarProps) {
       navItems = [
         { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
         { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
-        { name: t("sales"), href: "/dashboard/sales", icon: Users },
         { name: t("products"), href: "/dashboard/products", icon: Briefcase },
         { name: t("purchases"), href: "/dashboard/purchases", icon: Rocket },
         { name: t("reports"), href: "/dashboard/reports", icon: BarChart3 },

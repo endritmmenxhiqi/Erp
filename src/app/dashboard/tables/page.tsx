@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { StockService } from "@/lib/services/stock"
 import { StaffService } from "@/lib/services/staff"
@@ -9,10 +9,8 @@ import {
   Plus, 
   Coffee, 
   Check, 
-  Clock, 
   Sparkles, 
   Receipt, 
-  DollarSign, 
   Trash2,
   Users,
   Search,
@@ -22,14 +20,14 @@ import {
   ShoppingCart,
   Package,
   ArrowLeft,
-  AlertTriangle,
   CreditCard,
   Banknote,
   Wallet,
-  ChefHat,
-  Flame,
-  Zap,
-  Eye
+  Pencil,
+  ArrowRightLeft,
+  Layers,
+  MapPin,
+  AlertTriangle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,9 +38,10 @@ interface TableItem {
   id: number
   table_number: string
   zone: string
+  capacity?: number
   status: "E lire" | "E zene" | "E rezervuar"
   active_bill_total: number
-  waiter_name: string | null
+  waiter_name?: string | null
   current_order?: OrderLine[]
 }
 
@@ -67,19 +66,7 @@ interface StockProduct {
   category?: string
 }
 
-// ─── Default Tables ─────────────────────────────────────────────
-const DEFAULT_TABLES: TableItem[] = [
-  { id: 1, table_number: "T-01", zone: "Brenda", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 2, table_number: "T-02", zone: "Brenda", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 3, table_number: "T-03", zone: "Brenda", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 4, table_number: "T-04", zone: "Terasa", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 5, table_number: "T-05", zone: "Terasa", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 6, table_number: "T-06", zone: "Terasa", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 7, table_number: "VIP-1", zone: "VIP", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-  { id: 8, table_number: "VIP-2", zone: "VIP", status: "E lire", active_bill_total: 0, waiter_name: null, current_order: [] },
-]
-
-// ─── Persist orders to localStorage ─────────────────────────────
+// ─── Local Orders Storage (Cache for instant resilience) ────────
 function loadOrdersFromLocal(): Record<number, OrderLine[]> {
   try {
     const raw = localStorage.getItem("agoni_table_orders")
@@ -91,17 +78,41 @@ function saveOrdersToLocal(orders: Record<number, OrderLine[]>) {
   localStorage.setItem("agoni_table_orders", JSON.stringify(orders))
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Main Component
-// ═══════════════════════════════════════════════════════════════════
 export default function TablesPage() {
   const supabase = createClient()
-  const [tables, setTables] = useState<TableItem[]>(DEFAULT_TABLES)
+
+  // State: Tables & Dynamic Zones (Zero hardcoded defaults!)
+  const [tables, setTables] = useState<TableItem[]>([])
+  const [isLoadingTables, setIsLoadingTables] = useState(true)
+  const [zones, setZones] = useState<string[]>([])
   const [selectedZone, setSelectedZone] = useState<string>("Të gjitha")
+  
+  // Real stats
+  const [todaySalesTotal, setTodaySalesTotal] = useState<number>(0)
+  const [todaySalesCount, setTodaySalesCount] = useState<number>(0)
+
+  // Modals & Active State
   const [activeTable, setActiveTable] = useState<TableItem | null>(null)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isAddTableOpen, setIsAddTableOpen] = useState(false)
+  const [isEditTableOpen, setIsEditTableOpen] = useState(false)
+  const [tableToEdit, setTableToEdit] = useState<TableItem | null>(null)
+  const [tableToDelete, setTableToDelete] = useState<TableItem | null>(null)
+  
+  const [isAddZoneOpen, setIsAddZoneOpen] = useState(false)
+  const [isManageZonesOpen, setIsManageZonesOpen] = useState(false)
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+  const [transferTargetId, setTransferTargetId] = useState<number | null>(null)
+
+  // Inputs
   const [newTableNum, setNewTableNum] = useState("")
-  const [newZone, setNewZone] = useState("Brenda")
+  const [newTableZone, setNewTableZone] = useState("")
+  const [newTableCapacity, setNewTableCapacity] = useState("4")
+  const [newZoneName, setNewZoneName] = useState("")
+
+  // Edit table inputs
+  const [editTableNum, setEditTableNum] = useState("")
+  const [editTableZone, setEditTableZone] = useState("")
+  const [editTableCapacity, setEditTableCapacity] = useState("4")
 
   // POS State
   const [products, setProducts] = useState<StockProduct[]>([])
@@ -110,47 +121,18 @@ export default function TablesPage() {
   const [tableOrders, setTableOrders] = useState<Record<number, OrderLine[]>>({})
   const [isClosingBill, setIsClosingBill] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null)
-  const [showBillPreview, setShowBillPreview] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const barcodeRef = useRef<HTMLInputElement>(null)
 
-  // ─── Load Tables ────────────────────────────────────────────
+  // ─── Initial Load ───────────────────────────────────────────
   useEffect(() => {
     loadTables()
     loadProducts()
     loadProfile()
+    loadTodaySales()
     const saved = loadOrdersFromLocal()
     setTableOrders(saved)
   }, [])
-
-  async function loadTables() {
-    try {
-      const { data, error } = await supabase
-        .from("restaurant_tables")
-        .select("*")
-        .order("id", { ascending: true })
-
-      if (!error && data && data.length > 0) {
-        const saved = loadOrdersFromLocal()
-        const mapped = data.map((t: any) => ({
-          ...t,
-          current_order: saved[t.id] || []
-        }))
-        setTables(mapped as TableItem[])
-      }
-    } catch (err) {
-      console.warn("Using local tables setup:", err)
-    }
-  }
-
-  async function loadProducts() {
-    try {
-      const data = await StockService.getStock()
-      setProducts(data as StockProduct[])
-    } catch (err) {
-      console.warn("Using empty product list:", err)
-    }
-  }
 
   async function loadProfile() {
     try {
@@ -166,13 +148,353 @@ export default function TablesPage() {
     } catch {}
   }
 
+  async function loadTodaySales() {
+    try {
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      if (!businessId) return
+      
+      const today = new Date().toISOString().split("T")[0]
+      const { data } = await supabase
+        .from("sales")
+        .select("total_amount")
+        .eq("user_id", businessId)
+        .gte("date", today)
+        .ilike("invoice_num", "REST-%")
+
+      if (data) {
+        const total = data.reduce((acc: number, s: any) => acc + (Number(s.total_amount) || 0), 0)
+        setTodaySalesTotal(total)
+        setTodaySalesCount(data.length)
+      }
+    } catch (err) {
+      console.warn("Could not load today sales:", err)
+    }
+  }
+
+  async function loadTables() {
+    setIsLoadingTables(true)
+    try {
+      const businessId = await StaffService.getEffectiveBusinessId(supabase)
+      
+      // Call our API route which operates cleanly with server authorization
+      let fetchedTables: any[] = []
+      try {
+        const res = await fetch(`/api/restaurant/tables?business_id=${businessId || ""}`)
+        if (res.ok) {
+          const json = await res.json()
+          fetchedTables = json.tables || []
+        }
+      } catch {
+        // Fallback to direct supabase
+        if (businessId) {
+          const { data } = await supabase
+            .from("restaurant_tables")
+            .select("*")
+            .eq("user_id", businessId)
+            .order("id", { ascending: true })
+          if (data) fetchedTables = data
+        }
+      }
+
+      const saved = loadOrdersFromLocal()
+      const mapped = fetchedTables.map((t: any) => {
+        const orderFromDb = Array.isArray(t.current_order) && t.current_order.length > 0 ? t.current_order : (saved[t.id] || [])
+        return {
+          ...t,
+          current_order: orderFromDb,
+          capacity: t.capacity || 4
+        }
+      })
+
+      setTables(mapped)
+
+      // Initialize dynamic zones from actual tables + saved custom zones
+      const distinctZones = Array.from(new Set(mapped.map((t: any) => String(t.zone).trim()).filter(Boolean)))
+      const savedCustomZones = JSON.parse(localStorage.getItem(`agoni_zones_${businessId}`) || "[]")
+      const mergedZones = Array.from(new Set([...distinctZones, ...savedCustomZones]))
+
+      // If user has zero zones configured at all, provide two initial clean zones
+      const finalZones = mergedZones.length > 0 ? mergedZones : ["Brenda", "Terasa"]
+      setZones(finalZones as string[])
+      if (!newTableZone && finalZones.length > 0) {
+        setNewTableZone(finalZones[0] as string)
+      }
+    } catch (err) {
+      console.warn("Tables load notice:", err)
+    } finally {
+      setIsLoadingTables(false)
+    }
+  }
+
+  async function loadProducts() {
+    try {
+      const data = await StockService.getStock()
+      setProducts(data as StockProduct[])
+    } catch (err) {
+      console.warn("Using empty product list:", err)
+    }
+  }
+
+  // ─── Zone Management ────────────────────────────────────────
+  function handleAddZone() {
+    const clean = newZoneName.trim()
+    if (!clean) {
+      toast.error("Ju lutem shënoni emrin e ambientit/zonës.")
+      return
+    }
+
+    if (zones.map(z => z.toLowerCase()).includes(clean.toLowerCase())) {
+      toast.error(`Ambienti "${clean}" ekziston tashmë!`)
+      return
+    }
+
+    const updated = [...zones, clean]
+    setZones(updated)
+    setSelectedZone(clean)
+    setNewTableZone(clean)
+    setNewZoneName("")
+    setIsAddZoneOpen(false)
+
+    // Persist custom zones to localStorage
+    const businessId = profile?.id
+    if (businessId) {
+      localStorage.setItem(`agoni_zones_${businessId}`, JSON.stringify(updated))
+    }
+
+    toast.success(`Ambienti "${clean}" u shtua me sukses!`)
+  }
+
+  async function handleDeleteZone(zoneToDelete: string) {
+    const tablesInZone = tables.filter(t => t.zone === zoneToDelete)
+    if (tablesInZone.length > 0) {
+      toast.error(`Nuk mund të fshini zonën "${zoneToDelete}" sepse përmban ${tablesInZone.length} tavolina! Zhvendosni tavolinat së pari.`)
+      return
+    }
+
+    const updated = zones.filter(z => z !== zoneToDelete)
+    setZones(updated)
+    if (selectedZone === zoneToDelete) {
+      setSelectedZone("Të gjitha")
+    }
+
+    const businessId = profile?.id
+    if (businessId) {
+      localStorage.setItem(`agoni_zones_${businessId}`, JSON.stringify(updated))
+    }
+
+    toast.success(`Zona "${zoneToDelete}" u fshi!`)
+  }
+
+  // ─── Table CRUD: Add, Edit, Delete ──────────────────────────
+  async function handleAddTable() {
+    const cleanNum = newTableNum.trim()
+    if (!cleanNum) {
+      toast.error("Ju lutem vendosni numrin ose emrin e tavolinës.")
+      return
+    }
+
+    const zoneToUse = newTableZone.trim() || (zones[0] || "Brenda")
+    const capacity = parseInt(newTableCapacity) || 4
+
+    try {
+      const businessId = await StaffService.getEffectiveBusinessId(supabase) || profile?.id
+
+      const res = await fetch("/api/restaurant/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table_number: cleanNum,
+          zone: zoneToUse,
+          capacity: capacity,
+          business_id: businessId
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Dështoi shtimi i tavolinës")
+
+      const createdTable: TableItem = {
+        id: data.table.id,
+        table_number: data.table.table_number,
+        zone: data.table.zone,
+        capacity: data.table.capacity || capacity,
+        status: "E lire",
+        active_bill_total: 0,
+        current_order: []
+      }
+
+      setTables(prev => [...prev, createdTable])
+      setIsAddTableOpen(false)
+      setNewTableNum("")
+      toast.success(`Tavolina ${cleanNum} u shtua me sukses në zonën "${zoneToUse}"!`)
+    } catch (err: any) {
+      toast.error(err.message || "Gabim gjatë shtimit të tavolinës")
+    }
+  }
+
+  function openEditModal(table: TableItem, e: React.MouseEvent) {
+    e.stopPropagation()
+    setTableToEdit(table)
+    setEditTableNum(table.table_number)
+    setEditTableZone(table.zone)
+    setEditTableCapacity(String(table.capacity || 4))
+    setIsEditTableOpen(true)
+  }
+
+  async function handleSaveEditTable() {
+    if (!tableToEdit) return
+    const cleanNum = editTableNum.trim()
+    if (!cleanNum) {
+      toast.error("Numri i tavolinës nuk mund të jetë i zbrazët.")
+      return
+    }
+
+    const cleanZone = editTableZone.trim() || tableToEdit.zone
+    const capacity = parseInt(editTableCapacity) || 4
+
+    try {
+      const res = await fetch("/api/restaurant/tables", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: tableToEdit.id,
+          table_number: cleanNum,
+          zone: cleanZone,
+          capacity: capacity
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Dështoi përditësimi i tavolinës")
+
+      setTables(prev => prev.map(t => 
+        t.id === tableToEdit.id 
+          ? { ...t, table_number: cleanNum, zone: cleanZone, capacity: capacity }
+          : t
+      ))
+
+      if (activeTable?.id === tableToEdit.id) {
+        setActiveTable(prev => prev ? { ...prev, table_number: cleanNum, zone: cleanZone, capacity } : null)
+      }
+
+      setIsEditTableOpen(false)
+      setTableToEdit(null)
+      toast.success(`Tavolina u ndryshua me sukses! U zhvendos në: "${cleanZone}".`)
+    } catch (err: any) {
+      toast.error(err.message || "Gabim gjatë përditësimit të tavolinës")
+    }
+  }
+
+  function openDeleteConfirm(table: TableItem, e: React.MouseEvent) {
+    e.stopPropagation()
+    setTableToDelete(table)
+  }
+
+  async function handleConfirmDeleteTable() {
+    if (!tableToDelete) return
+
+    try {
+      const res = await fetch(`/api/restaurant/tables?id=${tableToDelete.id}`, {
+        method: "DELETE"
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Dështoi fshirja e tavolinës")
+      }
+
+      setTables(prev => prev.filter(t => t.id !== tableToDelete.id))
+      
+      // Clean orders cache
+      const newOrders = { ...tableOrders }
+      delete newOrders[tableToDelete.id]
+      setTableOrders(newOrders)
+      saveOrdersToLocal(newOrders)
+
+      if (activeTable?.id === tableToDelete.id) {
+        setActiveTable(null)
+      }
+
+      toast.success(`Tavolina ${tableToDelete.table_number} u fshi me sukses!`)
+      setTableToDelete(null)
+    } catch (err: any) {
+      toast.error(err.message || "Gabim gjatë fshirjes së tavolinës")
+    }
+  }
+
+  // ─── Order Transfer (Move Order to another table) ────────────
+  async function handleTransferOrder() {
+    if (!activeTable || !transferTargetId) return
+
+    const sourceOrder = tableOrders[activeTable.id] || []
+    if (sourceOrder.length === 0) {
+      toast.info("Tavolina nuk ka porosi për të transferuar.")
+      return
+    }
+
+    const targetTable = tables.find(t => t.id === transferTargetId)
+    if (!targetTable) return
+
+    try {
+      const total = activeTable.active_bill_total
+
+      // 1. Move to target table in local state
+      const newOrders = {
+        ...tableOrders,
+        [targetTable.id]: sourceOrder,
+      }
+      delete newOrders[activeTable.id]
+      setTableOrders(newOrders)
+      saveOrdersToLocal(newOrders)
+
+      // 2. Update DB for both tables
+      await fetch("/api/restaurant/tables", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: targetTable.id,
+          status: "E zene",
+          active_bill_total: total,
+          current_order: sourceOrder
+        })
+      })
+
+      await fetch("/api/restaurant/tables", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: activeTable.id,
+          status: "E lire",
+          active_bill_total: 0,
+          current_order: []
+        })
+      })
+
+      // 3. Update tables state
+      setTables(prev => prev.map(t => {
+        if (t.id === targetTable.id) {
+          return { ...t, status: "E zene", active_bill_total: total, current_order: sourceOrder }
+        }
+        if (t.id === activeTable.id) {
+          return { ...t, status: "E lire", active_bill_total: 0, current_order: [] }
+        }
+        return t
+      }))
+
+      toast.success(`Porosia u transferua nga ${activeTable.table_number} te ${targetTable.table_number}!`)
+      setIsTransferModalOpen(false)
+      setActiveTable(null)
+    } catch (err: any) {
+      toast.error(err.message || "Gabim gjatë transferimit të tavolinës")
+    }
+  }
+
   // ─── Order Management ──────────────────────────────────────
   function updateTableOrder(tableId: number, newOrder: OrderLine[]) {
     const newOrders = { ...tableOrders, [tableId]: newOrder }
     setTableOrders(newOrders)
     saveOrdersToLocal(newOrders)
 
-    // Recalculate total
     const total = newOrder.reduce((acc, item) => acc + (item.quantity * item.price), 0)
     const newStatus: "E lire" | "E zene" = newOrder.length > 0 ? "E zene" : "E lire"
     
@@ -191,14 +513,17 @@ export default function TablesPage() {
       } : null)
     }
 
-    // Persist to DB
-    try {
-      supabase
-        .from("restaurant_tables")
-        .update({ active_bill_total: total, status: newStatus })
-        .eq("id", tableId)
-        .then(() => {})
-    } catch {}
+    // Persist via API
+    fetch("/api/restaurant/tables", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: tableId,
+        active_bill_total: total,
+        status: newStatus,
+        current_order: newOrder
+      })
+    }).catch(() => {})
   }
 
   function addProductToTable(product: StockProduct) {
@@ -208,12 +533,10 @@ export default function TablesPage() {
 
     let newOrder: OrderLine[]
     if (existingIdx >= 0) {
-      // Increment quantity
       newOrder = existing.map((o, i) => 
         i === existingIdx ? { ...o, quantity: o.quantity + 1 } : o
       )
     } else {
-      // Add new line
       newOrder = [...existing, {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         item_name: product.item_name,
@@ -227,7 +550,7 @@ export default function TablesPage() {
     }
 
     updateTableOrder(activeTable.id, newOrder)
-    toast.success(`${product.item_name} u shtua!`, { duration: 1200 })
+    toast.success(`${product.item_name} u shtua!`, { duration: 1000 })
   }
 
   function removeOrderLine(lineId: string) {
@@ -248,7 +571,6 @@ export default function TablesPage() {
     updateTableOrder(activeTable.id, newOrder)
   }
 
-  // ─── Barcode Scanner ──────────────────────────────────────
   function handleBarcodeScan(barcode: string) {
     if (!barcode.trim()) return
     const found = products.find(p => p.barcode === barcode.trim())
@@ -257,11 +579,11 @@ export default function TablesPage() {
       setBarcodeInput("")
       barcodeRef.current?.focus()
     } else {
-      toast.error(`Produkti me barkod "${barcode}" nuk u gjet!`)
+      toast.error(`Produkti me barkod "${barcode}" nuk u gjet në stok!`)
     }
   }
 
-  // ─── Close Bill (Atomic: Sale + Stock Deduction) ──────────
+  // ─── Close Bill (Atomic Sale + Stock Deduction) ─────────────
   async function handleCloseAndBill() {
     if (!activeTable || !paymentMethod) return
     
@@ -282,7 +604,7 @@ export default function TablesPage() {
 
       const totalAmount = order.reduce((acc, item) => acc + (item.quantity * item.price), 0)
 
-      // 1. Create Sale (atomic)
+      // 1. Create Sale
       const invoiceNum = `REST-${activeTable.table_number}-${Date.now().toString().slice(-6)}`
       const { data: saleData, error: saleError } = await supabase.from("sales").insert({
         invoice_num: invoiceNum,
@@ -309,10 +631,9 @@ export default function TablesPage() {
         user_id: businessId
       }))
 
-      const { error: itemsError } = await supabase.from("sale_items").insert(saleItemsToInsert)
-      if (itemsError) throw itemsError
+      await supabase.from("sale_items").insert(saleItemsToInsert)
 
-      // 3. Atomic Stock Deduction (lidhje atomike me blerjet/inventarin)
+      // 3. Atomic Stock Deduction
       for (const item of order) {
         if (item.item_name) {
           await StockService.updateStock(
@@ -330,32 +651,37 @@ export default function TablesPage() {
       setTableOrders(newOrders)
       saveOrdersToLocal(newOrders)
 
-      // 5. Update table status
+      // 5. Update table status to "E lire"
       setTables(prev => prev.map(t => 
         t.id === activeTable.id 
           ? { ...t, active_bill_total: 0, status: "E lire" as const, current_order: [] }
           : t
       ))
 
-      // Update DB
-      try {
-        await supabase
-          .from("restaurant_tables")
-          .update({ status: "E lire", active_bill_total: 0 })
-          .eq("id", activeTable.id)
-      } catch {}
+      await fetch("/api/restaurant/tables", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: activeTable.id,
+          status: "E lire",
+          active_bill_total: 0,
+          current_order: []
+        })
+      })
+
+      // Update today stats live
+      setTodaySalesTotal(prev => prev + totalAmount)
+      setTodaySalesCount(prev => prev + 1)
 
       toast.success(
-        `✅ Fatura ${invoiceNum} u mbyll!\n€${totalAmount.toFixed(2)} — ${paymentMethod}\nStoku u zbrit automatikisht!`,
+        `✅ Fatura ${invoiceNum} u arkëtua!\n€${totalAmount.toFixed(2)} — ${paymentMethod}\nStoku u zbrit automatikisht!`,
         { duration: 4000 }
       )
 
-      // Trigger print
-      setTimeout(() => window.print(), 500)
+      setTimeout(() => window.print(), 400)
 
       setActiveTable(null)
       setPaymentMethod(null)
-      setShowBillPreview(false)
     } catch (err: any) {
       toast.error(err.message || "Gabim gjatë mbylljes së faturës")
     } finally {
@@ -363,41 +689,8 @@ export default function TablesPage() {
     }
   }
 
-  // ─── Add Table ─────────────────────────────────────────────
-  async function handleAddTable() {
-    if (!newTableNum.trim()) return
-    const newT: TableItem = {
-      id: Date.now(),
-      table_number: newTableNum,
-      zone: newZone,
-      status: "E lire",
-      active_bill_total: 0,
-      waiter_name: null,
-      current_order: []
-    }
-
-    setTables([...tables, newT])
-    setIsAddModalOpen(false)
-    setNewTableNum("")
-    toast.success(`Tavolina ${newTableNum} u shtua!`)
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from("restaurant_tables").insert([
-          {
-            table_number: newT.table_number,
-            zone: newT.zone,
-            status: "E lire",
-            user_id: user.id
-          }
-        ])
-      }
-    } catch {}
-  }
-
-  // ─── Computed Values ──────────────────────────────────────
-  const zones = ["Të gjitha", "Brenda", "Terasa", "VIP"]
+  // ─── Computed Values ────────────────────────────────────────
+  const allZonesList = ["Të gjitha", ...zones]
   const filtered = selectedZone === "Të gjitha" ? tables : tables.filter(t => t.zone === selectedZone)
   const occupiedCount = tables.filter(t => t.status === "E zene").length
   const totalInRestaurant = tables.reduce((acc, t) => acc + (t.active_bill_total || 0), 0)
@@ -411,14 +704,14 @@ export default function TablesPage() {
     return p.item_name.toLowerCase().includes(q) || (p.barcode || "").includes(q)
   })
 
-  // ═══════════════════════════════════════════════════════════════
-  // Render: Table-Click POS View (when a table is selected)
-  // ═══════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════
+  // Render: POS View when Table is selected
+  // ═════════════════════════════════════════════════════════════
   if (activeTable) {
     return (
       <div className="space-y-0 animate-in fade-in duration-200">
-        {/* ─── Print Preview (hidden on screen) ─── */}
-        <div className="hidden print:block bg-white text-black p-[15mm] font-sans text-sm">
+        {/* Printable Thermal Receipt (hidden on screen) */}
+        <div className="hidden print:block bg-white text-black p-[10mm] font-sans text-xs">
           <style dangerouslySetInnerHTML={{ __html: `
             @media print {
               @page { margin: 0; size: auto; }
@@ -426,418 +719,531 @@ export default function TablesPage() {
               [data-sonner-toaster] { display: none !important; }
             }
           `}} />
-          <div className="border-b-2 border-black pb-4 mb-4">
-            <h1 className="text-2xl font-black uppercase">{profile?.business_name || "RESTORANTI"}</h1>
+          <div className="border-b-2 border-black pb-3 mb-3 text-center">
+            <h1 className="text-xl font-black uppercase tracking-wider">{profile?.business_name || "RESTORANTI"}</h1>
             <p>{profile?.address || ""} | Tel: {profile?.phone_number || ""}</p>
-            <p>NF: {profile?.fiscal_number || ""}</p>
+            <p className="font-bold">Numri Fiskal: {profile?.fiscal_number || ""}</p>
           </div>
-          <div className="mb-4">
-            <p className="font-bold text-lg">Tavolina: {activeTable.table_number} | Zona: {activeTable.zone}</p>
-            <p>Data: {new Date().toLocaleString()}</p>
+          <div className="mb-3 flex justify-between border-b pb-2">
+            <div>
+              <p className="font-bold text-sm">Tavolina: {activeTable.table_number}</p>
+              <p className="text-[10px]">Zona: {activeTable.zone}</p>
+            </div>
+            <div className="text-right">
+              <p>{new Date().toLocaleDateString()}</p>
+              <p>{new Date().toLocaleTimeString()}</p>
+            </div>
           </div>
-          <table className="w-full border-collapse mb-4">
+          <table className="w-full border-collapse mb-3">
             <thead>
-              <tr className="border-b border-black">
-                <th className="text-left py-1">Artikulli</th>
-                <th className="text-right py-1">Sasia</th>
+              <tr className="border-b border-black text-left">
+                <th className="py-1">Artikulli</th>
+                <th className="text-center py-1">Sasia</th>
                 <th className="text-right py-1">Çmimi</th>
                 <th className="text-right py-1">Totali</th>
               </tr>
             </thead>
             <tbody>
               {activeOrder.map((item, i) => (
-                <tr key={i} className="border-b border-gray-200">
-                  <td className="py-1 font-bold">{item.item_name}</td>
-                  <td className="py-1 text-right">{item.quantity} {item.unit}</td>
-                  <td className="py-1 text-right">{item.price.toFixed(2)} €</td>
-                  <td className="py-1 text-right font-bold">{(item.quantity * item.price).toFixed(2)} €</td>
+                <tr key={i} className="border-b border-gray-100">
+                  <td className="py-1 font-semibold">{item.item_name}</td>
+                  <td className="py-1 text-center">{item.quantity} {item.unit}</td>
+                  <td className="py-1 text-right">€{item.price.toFixed(2)}</td>
+                  <td className="py-1 text-right font-bold">€{(item.quantity * item.price).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="border-t-2 border-black pt-2 text-right">
-            <p className="text-sm">Nën-totali: {activeTotal.toFixed(2)} €</p>
-            <p className="text-sm">TVSH (18%): {(activeTotal * 0.18).toFixed(2)} €</p>
-            <p className="text-2xl font-black">TOTALI: {(activeTotal * 1.18).toFixed(2)} €</p>
+          <div className="border-t-2 border-black pt-2 space-y-1">
+            <div className="flex justify-between text-base font-black">
+              <span>TOTALI PËR PAGESË:</span>
+              <span>€{activeTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-[11px] text-gray-700">
+              <span>Mënyra e Pagesës:</span>
+              <span className="font-bold uppercase">{paymentMethod || "Kesh"}</span>
+            </div>
+            <div className="flex justify-between text-[10px] text-gray-600">
+              <span>TVSH (18% e përfshirë):</span>
+              <span>€{(activeTotal * 0.18 / 1.18).toFixed(2)}</span>
+            </div>
           </div>
-          <div className="mt-6 text-center text-xs text-gray-500">
-            <p>Faleminderit për vizitën tuaj! 🍽️</p>
-            <p>Powered by Agoni ERP</p>
+          <div className="mt-4 pt-3 border-t text-center text-[10px] text-gray-500">
+            <p>Ju faleminderit për vizitën tuaj!</p>
+            <p className="font-bold">Agoni ERP — POS Restorant</p>
           </div>
         </div>
 
-        {/* ─── POS Header ─── */}
-        <div className="flex items-center justify-between pb-4 border-b border-border print:hidden">
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => { setActiveTable(null); setProductSearch(""); setBarcodeInput("") }}
-              className="h-10 w-10 rounded-xl hover:bg-accent"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
-                  activeTable.status === "E zene" ? "bg-rose-500/20 text-rose-400" : "bg-primary/20 text-primary"
-                }`}>
+        {/* Screen POS UI */}
+        <div className="space-y-4 print:hidden">
+          {/* Header Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-card border border-border shadow-xs">
+            <div className="flex items-center space-x-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setActiveTable(null)}
+                className="rounded-xl font-bold"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1.5" />
+                Kthehu te Tavolinat
+              </Button>
+
+              <div className="h-6 w-px bg-border" />
+
+              <div className="flex items-center space-x-2">
+                <div className="w-9 h-9 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-black text-sm">
                   {activeTable.table_number}
                 </div>
                 <div>
-                  <h2 className="text-xl font-extrabold tracking-tight">Tavolina {activeTable.table_number}</h2>
-                  <p className="text-xs text-muted-foreground">Zona: {activeTable.zone} • {activeTable.waiter_name ? `Kamarier: ${activeTable.waiter_name}` : "Pa kamarier"}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-foreground">Tavolina: {activeTable.table_number}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary border border-primary/20">
+                      {activeTable.zone}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Kapaciteti: {activeTable.capacity || 4} ulëse</span>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <div className="text-right mr-2">
-              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Totali Live</div>
-              <div className="text-2xl font-black text-primary">€{activeTotal.toFixed(2)}</div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="rounded-xl border-border text-xs font-bold"
-            >
-              <Printer className="w-3.5 h-3.5 mr-1" />
-              Print
-            </Button>
-          </div>
-        </div>
-
-        {/* ─── POS Split View ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-4 print:hidden">
-          
-          {/* LEFT: Product Catalog */}
-          <div className="lg:col-span-7 space-y-3">
-            {/* Barcode Scanner */}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Kërko artikull me emër..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  className="h-11 pl-10 bg-card border-border rounded-xl"
-                />
-              </div>
-              <div className="relative w-48">
-                <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
-                <Input
-                  ref={barcodeRef}
-                  placeholder="Skano barkodin..."
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleBarcodeScan(barcodeInput)
-                    }
-                  }}
-                  className="h-11 pl-10 bg-card border-amber-500/30 rounded-xl font-mono text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Product Grid */}
-            <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-1 rounded-xl">
-              {filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <Package className="w-12 h-12 text-muted-foreground/30 mb-3" />
-                  <p className="text-sm font-bold text-muted-foreground">Nuk u gjet asnjë produkt</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Shtoni produkte në modulin e Blerje / Stoku</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {filteredProducts.map((product) => {
-                    const inOrder = activeOrder.find(o => o.item_name === product.item_name)
-                    const isLowStock = product.quantity <= 3
-                    return (
-                      <button
-                        key={product.id}
-                        onClick={() => addProductToTable(product)}
-                        disabled={product.quantity <= 0}
-                        className={`group relative p-3 rounded-xl border text-left transition-all duration-150 active:scale-95 ${
-                          product.quantity <= 0
-                            ? "opacity-40 cursor-not-allowed bg-card border-border"
-                            : inOrder
-                            ? "bg-primary/10 border-primary/40 shadow-md shadow-primary/10 hover:border-primary"
-                            : "bg-card border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5"
-                        }`}
-                      >
-                        {inOrder && (
-                          <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black shadow-md animate-in zoom-in">
-                            {inOrder.quantity}
-                          </div>
-                        )}
-                        
-                        <div className="text-xs font-black text-foreground leading-tight line-clamp-2 min-h-[32px]">
-                          {product.item_name}
-                        </div>
-                        
-                        <div className="mt-2 flex items-end justify-between">
-                          <span className="text-lg font-black text-primary">
-                            €{(product.selling_price || 0).toFixed(2)}
-                          </span>
-                          <span className={`text-[9px] font-bold uppercase tracking-wider ${
-                            isLowStock ? "text-amber-500" : "text-muted-foreground"
-                          }`}>
-                            {product.quantity <= 0 ? "S'ka" : `${product.quantity} ${product.unit}`}
-                          </span>
-                        </div>
-
-                        {isLowStock && product.quantity > 0 && (
-                          <div className="absolute top-1.5 left-1.5">
-                            <Flame className="w-3 h-3 text-amber-500" />
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+            <div className="flex items-center gap-2">
+              {activeOrder.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTransferModalOpen(true)}
+                  className="rounded-xl border-border text-xs font-bold hover:bg-accent"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                  Ndërro Tavolinën
+                </Button>
               )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => openEditModal(activeTable, e)}
+                className="rounded-xl text-xs font-bold"
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1" />
+                Ndrysho Tavolinën
+              </Button>
             </div>
           </div>
 
-          {/* RIGHT: Order Cart (Porosia e Tavolinës) */}
-          <div className="lg:col-span-5 flex flex-col">
-            <div className="bg-card border border-border rounded-2xl flex flex-col h-[calc(100vh-280px)] shadow-xl">
-              {/* Cart Header */}
-              <div className="p-4 border-b border-border flex items-center justify-between bg-accent/10 rounded-t-2xl">
+          {/* POS Split View: Left = Products, Right = Order Bill */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Products List & Search (7 Cols) */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="p-4 rounded-2xl bg-card border border-border shadow-xs space-y-3">
                 <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-primary" />
-                  <span className="font-bold text-sm">Porosia e Tavolinës {activeTable.table_number}</span>
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input 
+                      placeholder="Kërko artikull në meny sipas emrit ose barkodit..." 
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="pl-9 h-11 rounded-xl bg-background/60"
+                    />
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-muted-foreground bg-accent/30 px-2 py-1 rounded-lg">
-                  {activeOrder.length} artikuj
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <Input 
+                    ref={barcodeRef}
+                    placeholder="Skano barkodin..." 
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleBarcodeScan(barcodeInput)
+                    }}
+                    className="h-9 text-xs rounded-xl bg-background/60"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handleBarcodeScan(barcodeInput)}
+                    className="h-9 px-3 text-xs rounded-xl shrink-0"
+                  >
+                    Shto me Barkod
+                  </Button>
+                </div>
               </div>
 
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-                {activeOrder.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                    <UtensilsCrossed className="w-10 h-10 text-muted-foreground/20 mb-3" />
-                    <p className="text-sm font-bold text-muted-foreground">Tavolina është e zbrazët</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Klikoni produktet në të majtë për t'i shtuar</p>
+              {/* Products Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[560px] overflow-y-auto pr-1">
+                {filteredProducts.length === 0 ? (
+                  <div className="col-span-full p-8 text-center bg-card rounded-2xl border border-dashed border-border text-muted-foreground text-sm">
+                    <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    Nuk u gjet asnjë artikull. Shtoni artikuj te menyja <b>Produktet</b>.
                   </div>
                 ) : (
-                  activeOrder.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-accent/10 border border-border/50 group hover:bg-accent/20 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-foreground truncate">{item.item_name}</div>
-                        <div className="text-[10px] text-muted-foreground">€{item.price.toFixed(2)} × {item.quantity}</div>
+                  filteredProducts.map((p) => (
+                    <button
+                      key={p.id || p.item_name}
+                      onClick={() => addProductToTable(p)}
+                      className="p-3.5 rounded-2xl bg-card border border-border hover:border-primary/50 text-left transition-all hover:scale-[1.02] shadow-2xs group flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="text-xs font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                          {p.item_name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">
+                          Stoku: {p.quantity || 0} {p.unit || "copë"}
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            if (item.quantity <= 1) {
-                              removeOrderLine(item.id)
-                            } else {
-                              changeQuantity(item.id, -1)
-                            }
-                          }}
-                          className="w-7 h-7 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
-                        >
-                          {item.quantity <= 1 ? <Trash2 className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                        </button>
-                        <span className="w-8 text-center text-xs font-black text-foreground">{item.quantity}</span>
-                        <button
-                          onClick={() => changeQuantity(item.id, 1)}
-                          className="w-7 h-7 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      <div className="w-16 text-right">
-                        <span className="text-xs font-black text-primary">
-                          €{(item.quantity * item.price).toFixed(2)}
+                      <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+                        <span className="text-sm font-black text-emerald-500">
+                          €{(Number(p.selling_price) || 0).toFixed(2)}
                         </span>
+                        <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+                          <Plus className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   ))
                 )}
               </div>
+            </div>
 
-              {/* Cart Footer / Totals */}
-              <div className="border-t border-border p-4 space-y-3 bg-accent/5 rounded-b-2xl">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Nën-totali:</span>
-                    <span className="font-bold">€{activeTotal.toFixed(2)}</span>
+            {/* Current Order & Billing (5 Cols) */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="p-5 rounded-2xl bg-card border border-border shadow-xs flex flex-col h-full min-h-[500px] justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
+                    <div className="flex items-center space-x-2">
+                      <ShoppingCart className="w-4 h-4 text-primary" />
+                      <h3 className="font-bold text-sm">Porosia Aktive ({activeOrder.length})</h3>
+                    </div>
+                    {activeOrder.length > 0 && (
+                      <button 
+                        onClick={() => updateTableOrder(activeTable.id, [])}
+                        className="text-[11px] text-rose-400 hover:text-rose-300 font-bold"
+                      >
+                        Pastro Porosinë
+                      </button>
+                    )}
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">TVSH (18%):</span>
-                    <span className="font-bold">€{(activeTotal * 0.18).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-border">
-                    <span className="text-sm font-black text-foreground">TOTALI:</span>
-                    <span className="text-2xl font-black text-primary">€{(activeTotal * 1.18).toFixed(2)}</span>
+
+                  {/* Order Items */}
+                  <div className="space-y-2 mt-3 max-h-[340px] overflow-y-auto pr-1">
+                    {activeOrder.length === 0 ? (
+                      <div className="py-12 text-center text-muted-foreground text-xs space-y-2">
+                        <UtensilsCrossed className="w-8 h-8 mx-auto opacity-30" />
+                        <p>Tavolina është e lirë. Klikoni artikujt majtas për të filluar porosinë.</p>
+                      </div>
+                    ) : (
+                      activeOrder.map((line) => (
+                        <div 
+                          key={line.id}
+                          className="p-3 rounded-xl bg-background/50 border border-border/80 flex items-center justify-between gap-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-foreground truncate">{line.item_name}</div>
+                            <div className="text-[11px] text-muted-foreground">€{line.price.toFixed(2)} / {line.unit}</div>
+                          </div>
+
+                          {/* Quantity Controls */}
+                          <div className="flex items-center space-x-1.5 shrink-0">
+                            <button
+                              onClick={() => changeQuantity(line.id, -1)}
+                              className="w-6 h-6 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-accent text-foreground text-xs"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="w-6 text-center text-xs font-black">{line.quantity}</span>
+                            <button
+                              onClick={() => changeQuantity(line.id, 1)}
+                              className="w-6 h-6 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-accent text-foreground text-xs"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          <div className="text-right shrink-0 w-16">
+                            <div className="text-xs font-black text-foreground">
+                              €{(line.quantity * line.price).toFixed(2)}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => removeOrderLine(line.id)}
+                            className="text-muted-foreground hover:text-rose-400 p-1 shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
-                {/* Payment Buttons */}
-                {activeOrder.length > 0 && !showBillPreview && (
-                  <Button
-                    onClick={() => setShowBillPreview(true)}
-                    className="w-full h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
-                  >
-                    <Receipt className="w-4 h-4 mr-2" />
-                    Mbyll & Fatero — €{(activeTotal * 1.18).toFixed(2)}
-                  </Button>
-                )}
-
-                {/* Payment Method Selection */}
-                {showBillPreview && (
-                  <div className="space-y-2 animate-in slide-in-from-bottom-2 duration-200">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider text-center">
-                      Zgjidhni Mënyrën e Pagesës
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: "Cash", icon: Banknote, label: "Cash", color: "emerald" },
-                        { id: "Card", icon: CreditCard, label: "Kartë", color: "blue" },
-                        { id: "Mixed", icon: Wallet, label: "Mikse", color: "purple" },
-                      ].map(method => (
-                        <button
-                          key={method.id}
-                          onClick={() => setPaymentMethod(method.id)}
-                          className={`p-3 rounded-xl border-2 text-center transition-all ${
-                            paymentMethod === method.id
-                              ? `border-${method.color}-500 bg-${method.color}-500/10 shadow-md`
-                              : "border-border bg-background hover:border-primary/30"
-                          }`}
-                        >
-                          <method.icon className={`w-5 h-5 mx-auto mb-1 ${
-                            paymentMethod === method.id ? `text-${method.color}-500` : "text-muted-foreground"
-                          }`} />
-                          <span className="text-[10px] font-bold">{method.label}</span>
-                        </button>
-                      ))}
+                {/* Bill Summary & Closing */}
+                {activeOrder.length > 0 && (
+                  <div className="pt-4 border-t border-border space-y-3 mt-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground font-semibold">Nëntotali:</span>
+                      <span className="font-bold">€{(activeTotal / 1.18).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground font-semibold">TVSH (18%):</span>
+                      <span className="font-bold">€{(activeTotal * 0.18 / 1.18).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-black border-t border-border pt-2">
+                      <span>Totali:</span>
+                      <span className="text-emerald-500 text-xl font-black">€{activeTotal.toFixed(2)}</span>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => { setShowBillPreview(false); setPaymentMethod(null) }}
-                        className="flex-1 h-10 rounded-xl text-xs font-bold"
-                      >
-                        Anulo
-                      </Button>
-                      <Button
-                        onClick={handleCloseAndBill}
-                        disabled={!paymentMethod || isClosingBill}
-                        className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/20"
-                      >
-                        {isClosingBill ? (
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Po procesohet...
-                          </span>
-                        ) : (
-                          <>
-                            <Check className="w-3.5 h-3.5 mr-1" />
-                            Konfirmo €{(activeTotal * 1.18).toFixed(2)}
-                          </>
-                        )}
-                      </Button>
+                    {/* Payment Method Selector */}
+                    <div className="space-y-1.5 pt-1">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Mënyra e Pagesës për Mbyllje Fature:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: "Cash", name: "Kesh", icon: Banknote },
+                          { id: "POS Kartelë", name: "Kartë", icon: CreditCard },
+                          { id: "Faturë", name: "Faturë", icon: Wallet }
+                        ].map(m => {
+                          const Icon = m.icon
+                          const isSel = paymentMethod === m.id
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setPaymentMethod(m.id)}
+                              className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                isSel 
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                                  : "bg-background border-border hover:bg-accent text-foreground"
+                              }`}
+                            >
+                              <Icon className="w-3.5 h-3.5" />
+                              {m.name}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
 
-                    <p className="text-[9px] text-center text-muted-foreground leading-tight">
-                      ⚠️ Mbyllja e faturës automatikisht zbrit stokon e produkteve (lidhje atomike)
-                    </p>
+                    <Button
+                      onClick={handleCloseAndBill}
+                      disabled={isClosingBill || !paymentMethod}
+                      className="w-full h-12 rounded-xl text-sm font-black primary-gradient text-white shadow-lg shadow-primary/20 hover:scale-[1.01] transition-all"
+                    >
+                      {isClosingBill ? (
+                        "Po mbyllet faturimi..."
+                      ) : (
+                        <>
+                          <Printer className="w-4 h-4 mr-2" />
+                          Mbyll Faturën & Zbrit Stokun (€{activeTotal.toFixed(2)})
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* Transfer Order Modal */}
+        {isTransferModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-primary" />
+                Lëviz Porosinë te Tavolinë Tjetër
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Zgjidhni tavolinën e re ku dëshironi të zhvendosni llogarinë (€{activeTotal.toFixed(2)}):
+              </p>
+
+              <div className="space-y-2 mt-4 max-h-60 overflow-y-auto">
+                {tables.filter(t => t.id !== activeTable.id && t.status === "E lire").length === 0 ? (
+                  <p className="text-xs text-rose-400 font-semibold p-3 text-center bg-rose-500/10 rounded-xl">
+                    Nuk ka asnjë tavolinë tjetër të lirë!
+                  </p>
+                ) : (
+                  tables
+                    .filter(t => t.id !== activeTable.id && t.status === "E lire")
+                    .map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTransferTargetId(t.id)}
+                        className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
+                          transferTargetId === t.id 
+                            ? "border-primary bg-primary/10 text-foreground font-bold" 
+                            : "border-border hover:bg-accent text-foreground"
+                        }`}
+                      >
+                        <div>
+                          <div className="text-xs font-bold">{t.table_number}</div>
+                          <div className="text-[10px] text-muted-foreground">Zona: {t.zone}</div>
+                        </div>
+                        {transferTargetId === t.id && <Check className="w-4 h-4 text-primary" />}
+                      </button>
+                    ))
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-5">
+                <Button variant="outline" size="sm" onClick={() => setIsTransferModalOpen(false)}>
+                  Anulo
+                </Button>
+                <Button 
+                  size="sm" 
+                  disabled={!transferTargetId} 
+                  onClick={handleTransferOrder}
+                  className="bg-primary text-white font-bold"
+                >
+                  Konfirmo Lëvizjen
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // Render: Table Grid View (default view)
-  // ═══════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════
+  // Render: Tables Grid View (Main Screen)
+  // ═════════════════════════════════════════════════════════════
   return (
     <div className="space-y-6 print:hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Moduli Restorant & Kafene</h1>
-            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
-              <Coffee className="w-3 h-3" /> Tavolinat Live
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Tavolinat & POS Restoranti</h1>
+            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center gap-1">
+              <Coffee className="w-3.5 h-3.5" /> POS i Integruar Live
             </span>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Klikoni mbi tavolinën për të hapur POS-in — shitjet bëhen direkt te tavolina me zbritje automatike të stokut.
+            Shitjet kryhen direkt te tavolinat me zbritje automatike të stokut dhe printim fature.
           </p>
         </div>
 
-        <Button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Shto Tavolinë
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setIsManageZonesOpen(true)}
+            className="rounded-xl border-border font-bold text-xs"
+          >
+            <Layers className="w-3.5 h-3.5 mr-1.5 text-primary" />
+            Menaxho Ambientet ({zones.length})
+          </Button>
+
+          <Button 
+            onClick={() => setIsAddTableOpen(true)}
+            className="rounded-xl primary-gradient text-white font-bold text-xs shadow-md shadow-primary/20"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Shto Tavolinë
+          </Button>
+        </div>
       </div>
 
-      {/* KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-card border border-border shadow-xs">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tavolina Gjithsej</div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 text-foreground">{tables.length}</div>
-          <div className="text-xs text-muted-foreground mt-1">{occupiedCount} tavolina aktive të zëna</div>
+      {/* Real-time KPI Stats (100% Real, Zero Static Mock Data) */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-xs">
+          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Tavolina Gjithsej</div>
+          <div className="text-2xl font-black mt-1 text-foreground">{tables.length}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">{occupiedCount} tavolina aktive me mysafirë</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-card border border-border shadow-xs">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Llogari të Hapura (Në Tavolina)</div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 text-emerald-500">€{totalInRestaurant.toFixed(2)}</div>
-          <div className="text-xs text-muted-foreground mt-1">Priten për arkëtim</div>
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-xs">
+          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Llogari të Hapura (Në Tavolina)</div>
+          <div className="text-2xl font-black mt-1 text-amber-500">€{totalInRestaurant.toFixed(2)}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">Priten për arkëtim</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 to-orange-950/20 border border-amber-800/30 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" /> Mobile POS — Klik Tavolinën
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-              Klikoni mbi çdo tavolinë për të hapur POS-in e plotë me produkte, barkod skaner dhe faturim automatik!
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-xs">
+          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Shitje Tavolinash Sot</div>
+          <div className="text-2xl font-black mt-1 text-emerald-500">€{todaySalesTotal.toFixed(2)}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">{todaySalesCount} fatura të mbyllura sot</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-primary/10 border border-primary/20 shadow-xs flex flex-col justify-between">
+          <div className="text-[11px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+            <Sparkles className="w-3 h-3" /> POS i Integruar
+          </div>
+          <div className="text-xs text-foreground font-semibold mt-1">
+            Kliko çdo tavolinë për të hapur POS-in
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            Lidhje atomike me zbritje stoku
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Zone Tabs (Created and configured by the user!) */}
+      <div className="flex items-center space-x-2 border-b border-border pb-3 overflow-x-auto">
+        {allZonesList.map(z => {
+          const isSelected = selectedZone === z
+          const countInZone = z === "Të gjitha" ? tables.length : tables.filter(t => t.zone === z).length
+          const occupiedInZone = z === "Të gjitha" ? occupiedCount : tables.filter(t => t.zone === z && t.status === "E zene").length
+
+          return (
+            <button
+              key={z}
+              onClick={() => setSelectedZone(z)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                isSelected 
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                  : "bg-card hover:bg-accent text-muted-foreground hover:text-foreground border border-border"
+              }`}
+            >
+              <span>{z}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              }`}>
+                {countInZone}
+              </span>
+              {occupiedInZone > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </button>
+          )
+        })}
+
+        <button
+          onClick={() => setIsAddZoneOpen(true)}
+          className="px-3 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 border border-dashed border-primary/40 shrink-0 flex items-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Shto Ambient
+        </button>
+      </div>
+
+      {/* Empty State: If user has 0 tables */}
+      {!isLoadingTables && tables.length === 0 && (
+        <div className="p-12 text-center rounded-3xl bg-card border border-dashed border-border space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+            <UtensilsCrossed className="w-7 h-7" />
+          </div>
+          <div className="space-y-1 max-w-md mx-auto">
+            <h3 className="text-lg font-bold text-foreground">Nuk keni asnjë tavolinë të regjistruar</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Krijoni ambientet (p.sh. Brenda, Terasa, VIP, Kati 2) dhe shtoni tavolinat e lokalit tuaj për të filluar me porositë dhe faturimin.
             </p>
           </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <Zap className="w-3 h-3 text-amber-400" />
-            <span className="text-[11px] font-semibold text-amber-400">Lidhje Atomike: Shitje ↔ Stok</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Zone Tabs */}
-      <div className="flex items-center space-x-2 border-b border-border pb-3 overflow-x-auto">
-        {zones.map(z => (
-          <button
-            key={z}
-            onClick={() => setSelectedZone(z)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
-              selectedZone === z 
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
-                : "bg-card hover:bg-accent text-muted-foreground hover:text-foreground border border-border"
-            }`}
+          <Button 
+            onClick={() => setIsAddTableOpen(true)}
+            className="rounded-xl primary-gradient text-white font-bold text-xs shadow-md shadow-primary/20 px-6"
           >
-            {z}
-          </button>
-        ))}
-      </div>
+            <Plus className="w-4 h-4 mr-2" />
+            Shto Tavolinën e Parë
+          </Button>
+        </div>
+      )}
 
       {/* Tables Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
         {filtered.map((t) => {
           const isOccupied = t.status === "E zene"
           const isReserved = t.status === "E rezervuar"
@@ -848,25 +1254,66 @@ export default function TablesPage() {
             <div 
               key={t.id}
               onClick={() => setActiveTable(t)}
-              className={`p-4 rounded-2xl border transition-all cursor-pointer select-none relative group hover:scale-[1.02] ${
+              className={`p-4 rounded-2xl border transition-all cursor-pointer select-none relative group hover:scale-[1.02] shadow-xs ${
                 isOccupied 
-                  ? "bg-rose-950/20 border-rose-600/40 hover:border-rose-500 shadow-md shadow-rose-950/10" 
+                  ? "bg-rose-500/10 border-rose-500/40 hover:border-rose-500" 
                   : isReserved
-                  ? "bg-amber-950/20 border-amber-600/40 hover:border-amber-500"
+                  ? "bg-amber-500/10 border-amber-500/40 hover:border-amber-500"
                   : "bg-card border-border hover:border-primary/50"
               }`}
             >
               {orderCount > 0 && (
-                <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black shadow-md animate-in zoom-in">
+                <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black shadow-md">
                   {orderCount}
                 </div>
               )}
 
+              {/* Card Header: Zone + Quick Action Buttons (Edit / Delete) */}
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[90px]">
                   {t.zone}
                 </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+
+                <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) => openEditModal(t, e)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Ndrysho tavolinën / ndërro vendin"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={(e) => openDeleteConfirm(t, e)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    title="Fshi tavolinën"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Table Number & Amount */}
+              <div className="flex items-center space-x-3 my-2.5">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
+                  isOccupied ? "bg-rose-500/20 text-rose-400" : "bg-primary/15 text-primary"
+                }`}>
+                  {t.table_number}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-base font-black text-foreground truncate">
+                    €{orderTotal.toFixed(2)}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Users className="w-2.5 h-2.5" />
+                    {t.capacity || 4} ulëse
+                  </div>
+                </div>
+              </div>
+
+              {/* Status footer */}
+              <div className="pt-2 border-t border-border/50 flex items-center justify-between text-[11px]">
+                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                   isOccupied 
                     ? "bg-rose-500/20 text-rose-400" 
                     : isReserved 
@@ -875,69 +1322,288 @@ export default function TablesPage() {
                 }`}>
                   {t.status}
                 </span>
-              </div>
 
-              <div className="flex items-center space-x-3 my-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${
-                  isOccupied ? "bg-rose-500/20 text-rose-400" : "bg-primary/20 text-primary"
-                }`}>
-                  {t.table_number}
-                </div>
-                <div>
-                  <div className="text-lg font-black text-foreground">
-                    €{orderTotal.toFixed(2)}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {orderCount > 0 ? `${orderCount} artikuj` : "Gati"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <ShoppingCart className="w-3 h-3" />
-                  Kliko për POS
+                <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1 font-semibold">
+                  Hap POS
+                  <Receipt className="w-3 h-3" />
                 </span>
-                <Receipt className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Add Table Modal */}
-      {isAddModalOpen && (
+      {/* ─── MODAL: Shto Tavolinë ─────────────────────────────── */}
+      {isAddTableOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <h3 className="text-lg font-bold">Shto Tavolinë të Re</h3>
-            <div className="space-y-3 mt-4">
+          <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Plus className="w-4 h-4 text-primary" />
+                Shto Tavolinë të Re
+              </h3>
+              <button onClick={() => setIsAddTableOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground">Numri / Emri i Tavolinës</label>
+                <label className="text-xs font-semibold text-muted-foreground">Numri ose Emri i Tavolinës</label>
                 <Input 
-                  placeholder="p.sh. T-10 ose Bar-1" 
+                  placeholder="p.sh. T-01, Tavolina 10, Bar 2..." 
                   value={newTableNum}
                   onChange={(e) => setNewTableNum(e.target.value)}
-                  className="mt-1"
+                  className="mt-1 h-10 rounded-xl"
+                  autoFocus
                 />
               </div>
+
               <div>
-                <label className="text-xs font-semibold text-muted-foreground">Zona</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-muted-foreground">Ambienti / Zona</label>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsAddTableOpen(false)
+                      setIsAddZoneOpen(true)
+                    }}
+                    className="text-[11px] text-primary hover:underline font-bold"
+                  >
+                    + Krijo Zonë të Re
+                  </button>
+                </div>
+
                 <select 
-                  value={newZone}
-                  onChange={(e) => setNewZone(e.target.value)}
-                  className="w-full mt-1 h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                  value={newTableZone}
+                  onChange={(e) => setNewTableZone(e.target.value)}
+                  className="w-full mt-1 h-10 rounded-xl border border-input bg-card px-3 py-1 text-xs font-semibold shadow-xs"
                 >
-                  <option value="Brenda" className="bg-card">Brenda</option>
-                  <option value="Terasa" className="bg-card">Terasa</option>
-                  <option value="VIP" className="bg-card">VIP</option>
-                  <option value="Kati 2" className="bg-card">Kati 2</option>
+                  {zones.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Kapaciteti (Ulëse)</label>
+                <Input 
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={newTableCapacity}
+                  onChange={(e) => setNewTableCapacity(e.target.value)}
+                  className="mt-1 h-10 rounded-xl"
+                />
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2 mt-5">
-              <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Anulo</Button>
-              <Button onClick={handleAddTable} className="bg-primary">Krijo</Button>
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <Button variant="outline" size="sm" onClick={() => setIsAddTableOpen(false)}>
+                Anulo
+              </Button>
+              <Button size="sm" onClick={handleAddTable} className="bg-primary text-white font-bold">
+                Krijo Tavolinën
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Ndrysho Tavolinë (Edit, Change Zone/Place) ─── */}
+      {isEditTableOpen && tableToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-primary" />
+                Ndrysho Tavolinën / Vendin
+              </h3>
+              <button onClick={() => setIsEditTableOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Emri / Numri i Tavolinës</label>
+                <Input 
+                  value={editTableNum}
+                  onChange={(e) => setEditTableNum(e.target.value)}
+                  className="mt-1 h-10 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-muted-foreground">Ambienti / Zona e Tavolinës</label>
+                  <span className="text-[10px] text-muted-foreground">Ndërroni vendin e tavolinës këtu</span>
+                </div>
+                <select 
+                  value={editTableZone}
+                  onChange={(e) => setEditTableZone(e.target.value)}
+                  className="w-full mt-1 h-10 rounded-xl border border-input bg-card px-3 py-1 text-xs font-semibold shadow-xs"
+                >
+                  {zones.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Kapaciteti (Ulëse)</label>
+                <Input 
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={editTableCapacity}
+                  onChange={(e) => setEditTableCapacity(e.target.value)}
+                  className="mt-1 h-10 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <Button variant="outline" size="sm" onClick={() => setIsEditTableOpen(false)}>
+                Anulo
+              </Button>
+              <Button size="sm" onClick={handleSaveEditTable} className="bg-primary text-white font-bold">
+                Ruaj Ndryshimet
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Konfirmim Fshirjeje Tavoline ───────────────── */}
+      {tableToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center gap-2 text-rose-500 font-bold text-base">
+              <AlertTriangle className="w-5 h-5" />
+              Fshi Tavolinën {tableToDelete.table_number}?
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Jeni të sigurt që dëshironi të fshini tavolinën <b>{tableToDelete.table_number}</b> ({tableToDelete.zone})?
+              {tableToDelete.active_bill_total > 0 && (
+                <span className="block mt-2 font-bold text-rose-400">
+                  Kujdes: Kjo tavolinë ka porosi aktive prej €{tableToDelete.active_bill_total.toFixed(2)}!
+                </span>
+              )}
+            </p>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <Button variant="outline" size="sm" onClick={() => setTableToDelete(null)}>
+                Anulo
+              </Button>
+              <Button size="sm" variant="destructive" onClick={handleConfirmDeleteTable} className="font-bold">
+                Po, Fshije
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Shto Zonë / Ambient të Ri ──────────────────── */}
+      {isAddZoneOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" />
+                Shto Ambient / Zonë të Re
+              </h3>
+              <button onClick={() => setIsAddZoneOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Emri i Ambientit / Zonës</label>
+              <Input 
+                placeholder="p.sh. Kopshti, Kati 2, Salla VIP, Veranda..." 
+                value={newZoneName}
+                onChange={(e) => setNewZoneName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddZone() }}
+                className="mt-1 h-10 rounded-xl"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <Button variant="outline" size="sm" onClick={() => setIsAddZoneOpen(false)}>
+                Anulo
+              </Button>
+              <Button size="sm" onClick={handleAddZone} className="bg-primary text-white font-bold">
+                Krijo Ambientin
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Menaxho Ambientet ──────────────────────────── */}
+      {isManageZonesOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card border border-border w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Layers className="w-4 h-4 text-primary" />
+                Menaxhimi i Ambientëve ({zones.length})
+              </h3>
+              <button onClick={() => setIsManageZonesOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {zones.map((z) => {
+                const count = tables.filter(t => t.zone === z).length
+                return (
+                  <div 
+                    key={z}
+                    className="p-3 rounded-xl bg-background/50 border border-border flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-foreground">{z}</div>
+                      <div className="text-[10px] text-muted-foreground">{count} tavolina në këtë zonë</div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteZone(z)}
+                      disabled={count > 0}
+                      className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
+                        count > 0 
+                          ? "opacity-30 cursor-not-allowed text-muted-foreground" 
+                          : "text-rose-400 hover:bg-rose-500/10"
+                      }`}
+                      title={count > 0 ? "Zhvendosni tavolinat para se ta fshini" : "Fshi zonën"}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="pt-2 border-t flex justify-between items-center">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setIsManageZonesOpen(false)
+                  setIsAddZoneOpen(true)
+                }}
+                className="text-xs font-bold text-primary"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Shto Ambient Tjetër
+              </Button>
+
+              <Button size="sm" onClick={() => setIsManageZonesOpen(false)}>
+                Mbyll
+              </Button>
             </div>
           </div>
         </div>

@@ -30,9 +30,12 @@ import {
 import { MAX_INVOICE_LENGTH, MAX_ITEMS } from "@/lib/constants"
 import { StaffService, Worker } from "@/lib/services/staff"
 import { TwoFactorDialog } from "@/components/two-factor-dialog"
+import { useBusinessMode } from "@/components/business-mode-provider"
+import Link from "next/link"
 
 export default function SalesPage() {
   const { t } = useTranslation()
+  const { businessType } = useBusinessMode()
   const [isLoading, setIsLoading] = useState(false)
   const [showVatModal, setShowVatModal] = useState(false)
   const [pendingValues, setPendingValues] = useState<any>(null)
@@ -338,6 +341,28 @@ export default function SalesPage() {
         <h2 className="text-4xl font-extrabold tracking-tight text-foreground">{t("sales")}</h2>
         <p className="text-muted-foreground">{t("dashboard_desc")}</p>
       </div>
+
+      {businessType === "gastronomy" && (
+        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-xl shrink-0">
+              🍽️
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Shitjet e Restorantit janë të Integruara te Tavolinat</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Për gastronomi, të gjitha faturat dhe porositë me zbritje stoku bëhen direkt tek moduli <b>Tavolinat (Restaurant POS)</b>.
+              </p>
+            </div>
+          </div>
+          <Link 
+            href="/dashboard/tables" 
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shrink-0 transition-all shadow-md text-center"
+          >
+            Hap Tavolinat (Restaurant POS)
+          </Link>
+        </div>
+      )}
 
       <div className="hidden print:block bg-white text-black p-[20mm] font-sans text-sm print:h-auto">
         <style dangerouslySetInnerHTML={{ __html: `

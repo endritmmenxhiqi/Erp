@@ -137,6 +137,7 @@ interface BusinessModeContextType {
   setUserRole: (role: string) => void
   hasPermission: (module: string) => boolean
   currentRoles: { id: string; name: string; permissions: string[] }[]
+  isLocked: boolean
 }
 
 const BusinessModeContext = createContext<BusinessModeContextType | undefined>(undefined)
@@ -144,21 +145,69 @@ const BusinessModeContext = createContext<BusinessModeContextType | undefined>(u
 export function BusinessModeProvider({ children }: { children: React.ReactNode }) {
   const [businessType, setBusinessTypeState] = useState<BusinessType>("market")
   const [userRole, setUserRoleState] = useState<string>("owner")
+  const [isLocked, setIsLocked] = useState<boolean>(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem("agoni_business_type") as BusinessType
-    if (saved && INDUSTRIES.some(i => i.id === saved)) {
-      setBusinessTypeState(saved)
+    async function syncProfile() {
+      try {
+        const { createClient } = await import("@/utils/supabase/client")
+        const { StaffService } = await import("@/lib/services/staff")
+        const supabase = createClient()
+        
+        const worker = StaffService.getCurrentWorker()
+        let targetId: string | null = null
+
+        if (worker?.business_id) {
+          targetId = worker.business_id
+        } else {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) targetId = user.id
+        }
+
+        if (targetId) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('business_type, role, user_role')
+            .eq('id', targetId)
+            .single()
+
+          if (profile?.business_type && INDUSTRIES.some(i => i.id === profile.business_type)) {
+            setBusinessTypeState(profile.business_type as BusinessType)
+            localStorage.setItem("agoni_business_type", profile.business_type)
+            if (profile.role === 'admin') {
+              setIsLocked(false) // Super admins can test any industry
+              setUserRoleState('admin')
+            } else {
+              setIsLocked(true) // Normal businesses stay strictly locked to their registered industry
+              setUserRoleState(profile.user_role || 'owner')
+            }
+            return
+          }
+        }
+      } catch (err) {
+        console.warn("Could not sync business profile:", err)
+      }
+
+      // Fallback to localStorage if offline/not authenticated
+      const saved = localStorage.getItem("agoni_business_type") as BusinessType
+      if (saved && INDUSTRIES.some(i => i.id === saved)) {
+        setBusinessTypeState(saved)
+      }
+      const savedRole = localStorage.getItem("agoni_user_role")
+      if (savedRole) {
+        setUserRoleState(savedRole)
+      }
     }
-    const savedRole = localStorage.getItem("agoni_user_role")
-    if (savedRole) {
-      setUserRoleState(savedRole)
-    }
+
+    syncProfile()
   }, [])
 
   const setBusinessType = (type: BusinessType) => {
-    setBusinessTypeState(type)
-    localStorage.setItem("agoni_business_type", type)
+    // Only allow if not locked (or super admin)
+    if (!isLocked) {
+      setBusinessTypeState(type)
+      localStorage.setItem("agoni_business_type", type)
+    }
   }
 
   const setUserRole = (role: string) => {
@@ -170,7 +219,7 @@ export function BusinessModeProvider({ children }: { children: React.ReactNode }
   const currentRoles = INDUSTRY_ROLES[businessType] || INDUSTRY_ROLES.market
   
   const hasPermission = (module: string): boolean => {
-    if (userRole === "owner" || userRole === "manager") return true
+    if (userRole === "owner" || userRole === "manager" || userRole === "admin") return true
     const roleConfig = currentRoles.find(r => r.id === userRole)
     if (!roleConfig) return true
     if (roleConfig.permissions.includes("*")) return true
@@ -185,7 +234,8 @@ export function BusinessModeProvider({ children }: { children: React.ReactNode }
       userRole,
       setUserRole,
       hasPermission,
-      currentRoles
+      currentRoles,
+      isLocked
     }}>
       {children}
     </BusinessModeContext.Provider>

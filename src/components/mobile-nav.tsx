@@ -25,6 +25,7 @@ import { ThemeToggle } from "./theme-toggle"
 import { LanguageToggle } from "./language-toggle"
 import { useTranslation } from "@/components/language-provider"
 import { IndustrySelector } from "./industry-selector"
+import { useBusinessMode } from "./business-mode-provider"
 import { StaffService, Worker } from "@/lib/services/staff"
 
 interface MobileNavProps {
@@ -37,6 +38,7 @@ export function MobileNav({ email, role, signOutAction }: MobileNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
+  const { businessType } = useBusinessMode()
   const [isOpen, setIsOpen] = useState(false)
   const worker: Worker | null = typeof window === "undefined" ? null : StaffService.getCurrentWorker()
 
@@ -50,15 +52,22 @@ export function MobileNav({ email, role, signOutAction }: MobileNavProps) {
     }
   }
 
+  const isGastronomy = businessType === "gastronomy"
+
   const navCategories = [
     {
       title: "Shitjet & Shërbimi",
-      items: [
-        { name: t("sales"), href: "/dashboard/sales", icon: ShoppingCart },
-        { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList, badge: "AI" },
-        { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
-        { name: t("sales_book"), href: "/dashboard/sales-book", icon: ShoppingCart },
-      ]
+      items: isGastronomy 
+        ? [
+            { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+            { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList, badge: "AI" },
+          ]
+        : [
+            { name: t("sales"), href: "/dashboard/sales", icon: ShoppingCart },
+            { name: t("orders"), href: "/dashboard/orders", icon: ClipboardList, badge: "AI" },
+            { name: t("restaurant"), href: "/dashboard/tables", icon: UtensilsCrossed },
+            { name: t("sales_book"), href: "/dashboard/sales-book", icon: ShoppingCart },
+          ]
     },
     {
       title: "Blerjet & Magazina",

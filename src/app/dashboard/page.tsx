@@ -52,17 +52,19 @@ export default function DashboardPage() {
   const { businessType, currentIndustry } = useBusinessMode()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [aiAdvisor, setAiAdvisor] = useState<any>({
-    greeting: "Mirësevini në qendrën e kontrollit operativ.",
-    health_score: 95,
-    status_summary: "Sistemi funksionon me parametra optimalë. Shitjet dhe furnizimet janë të balancuara.",
-    top_opportunity: "Krijoni oferta të reja me asistentin me zë për të rritur konvertimet këtë javë.",
-    top_warning: "Kontrolloni artikujt me sasi të ulët në depo para furnizimit të radhës.",
-    recommended_actions: [
-      "Verifiko faturat e hapura tek Klientët & CRM",
-      "Kontrollo tavolinat aktive në modulin Restorant",
-      "Përdor kamerën e telefonit për skanim faturash blerje"
-    ]
+  const [realStats, setRealStats] = useState({
+    totalSales: 0,
+    salesCount: 0,
+    totalProducts: 0,
+    lowStockCount: 0,
+    totalTables: 0,
+    occupiedTables: 0,
+    openBillsTotal: 0,
+    totalPurchases: 0,
+    healthScore: 100,
+    statusSummary: "Po sinkronizohen të dhënat në kohë reale...",
+    topWarning: "Sistemi operon me parametra normalë.",
+    topOpportunity: "Shtoni artikuj në meny/stok për të zgjeruar ofertën e shitjeve."
   })
   const supabase = createClient()
   
@@ -87,7 +89,7 @@ export default function DashboardPage() {
     staff: { title: t("staff_mgmt"), href: "/dashboard/staff", icon: UserCog, tone: "text-indigo-400", badge: "Ekipi" },
   }
 
-  // Filter modules based on selected business industry
+  // Filter modules based on selected business industry (Për gastronomi: shitjet kryhen te Tavolinat)
   let menuItems: any[] = []
   if (businessType === "rent_a_car") {
     menuItems = [allModules.rent_a_car, allModules.orders, allModules.clients, allModules.purchases, allModules.reports, allModules.staff]
@@ -100,29 +102,102 @@ export default function DashboardPage() {
   } else if (businessType === "customs_distribution") {
     menuItems = [allModules.customs, allModules.purchases, allModules.products, allModules.suppliers, allModules.sales, allModules.reports, allModules.staff]
   } else if (businessType === "gastronomy") {
-    menuItems = [allModules.tables, allModules.sales, allModules.products, allModules.purchases, allModules.reports, allModules.staff]
+    menuItems = [allModules.tables, allModules.products, allModules.purchases, allModules.reports, allModules.staff]
   } else if (businessType === "market") {
     menuItems = [allModules.sales, allModules.orders, allModules.products, allModules.clients, allModules.purchases, allModules.suppliers, allModules.sales_book, allModules.reports, allModules.staff]
   } else {
-    // "all" - Show all
     menuItems = Object.values(allModules)
   }
 
   useEffect(() => {
     async function load() {
-      const businessId = await StaffService.getEffectiveBusinessId(supabase)
-      if (businessId) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', businessId)
-          .single()
-        setProfile(data as Profile)
+      try {
+        const businessId = await StaffService.getEffectiveBusinessId(supabase)
+        if (businessId) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', businessId)
+            .single()
+          setProfile(prof as Profile)
+
+          // 1. Merr të dhënat reale nga Shitjet
+          const { data: salesData } = await supabase
+            .from('sales')
+            .select('total_amount, date')
+            .eq('user_id', businessId)
+
+          const totalSales = (salesData || []).reduce((acc: number, s: any) => acc + (Number(s.total_amount) || 0), 0)
+          const salesCount = (salesData || []).length
+
+          // 2. Merr artikujt realë nga Stoku
+          const { data: stockData } = await supabase
+            .from('stock')
+            .select('id, quantity')
+            .eq('user_id', businessId)
+
+          const totalProducts = (stockData || []).length
+          const lowStockCount = (stockData || []).filter((item: any) => Number(item.quantity) <= 5).length
+
+          // 3. Merr tavolinat reale nga Restoranti
+          const { data: tablesData } = await supabase
+            .from('restaurant_tables')
+            .select('id, status, active_bill_total')
+            .eq('user_id', businessId)
+
+          const totalTables = (tablesData || []).length
+          const occupiedTables = (tablesData || []).filter((t: any) => t.status === 'E zene').length
+          const openBillsTotal = (tablesData || []).reduce((acc: number, t: any) => acc + (Number(t.active_bill_total) || 0), 0)
+
+          // 4. Llogarit score real bazuar në parametra realë
+          let calculatedScore = 75
+          if (totalProducts > 0) calculatedScore += 10
+          if (salesCount > 0) calculatedScore += 10
+          if (lowStockCount > 3) calculatedScore -= 10
+          calculatedScore = Math.max(30, Math.min(100, calculatedScore))
+
+          let summary = ""
+          if (businessType === "gastronomy") {
+            summary = `Operacionet e restorantit janë aktive: ${totalTables} tavolina të konfiguruara (${occupiedTables} të zëna me llogari të hapura prej €${openBillsTotal.toFixed(2)}). Janë arkëtuar ${salesCount} fatura shitjesh.`
+          } else {
+            summary = `Sistemi operon me të dhëna reale: ${totalProducts} produkte në stok, ${salesCount} shitje të arkëtuara me vlerë totale €${totalSales.toFixed(2)}.`
+          }
+
+          let warning = "Sistemi operon rregullisht pa vërejtje kritike."
+          if (lowStockCount > 0) {
+            warning = `${lowStockCount} artikuj kanë sasi të ulët në stok (nën 5 copë). Kontrolloni furnizimet.`
+          } else if (totalProducts === 0) {
+            warning = "Nuk keni asnjë artikull në stok. Shtoni produktet e para te menyja 'Produktet'."
+          }
+
+          let opportunity = "Shtoni artikuj ose rrisni ofertat për të përmirësuar bilancin mujor."
+          if (businessType === "gastronomy" && openBillsTotal > 0) {
+            opportunity = `Keni €${openBillsTotal.toFixed(2)} të paarkëtuara në ${occupiedTables} tavolina aktive gati për mbyllje.`
+          }
+
+          setRealStats({
+            totalSales,
+            salesCount,
+            totalProducts,
+            lowStockCount,
+            totalTables,
+            occupiedTables,
+            openBillsTotal,
+            totalPurchases: 0,
+            healthScore: calculatedScore,
+            statusSummary: summary,
+            topWarning: warning,
+            topOpportunity: opportunity
+          })
+        }
+      } catch (err) {
+        console.warn("Could not load real dashboard metrics:", err)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
     load()
-  }, [supabase])
+  }, [supabase, businessType])
 
   if (isLoading) {
     return (
@@ -161,46 +236,48 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* AI Business Advisor Banner */}
+      {/* AI Business Advisor Banner - Të Dhëna Reale Operative */}
       <div className="p-6 rounded-3xl bg-gradient-to-br from-blue-950/40 via-indigo-950/20 to-card border border-blue-800/40 shadow-xl relative overflow-hidden">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" /> AI Asistenti Kryesor
+                <Sparkles className="w-3.5 h-3.5" /> Analizë Operative Reale
               </span>
-              <span className="text-xs text-muted-foreground">Analizë Operative në Kohë Reale</span>
+              <span className="text-xs text-muted-foreground">Të Dhëna Live nga Databaza</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-foreground">
-              {aiAdvisor.greeting}
+              {profile?.business_name ? `Mirësevini, ${profile.business_name}!` : "Mirësevini në qendrën e kontrollit operativ!"}
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {aiAdvisor.status_summary}
+              {realStats.statusSummary}
             </p>
           </div>
 
           <div className="flex items-center gap-4 bg-background/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shrink-0">
             <div className="text-center">
-              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Health Score</div>
-              <div className="text-3xl font-black text-emerald-400 mt-0.5">{aiAdvisor.health_score}%</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Health Score Real</div>
+              <div className="text-3xl font-black text-emerald-400 mt-0.5">{realStats.healthScore}%</div>
             </div>
             <div className="h-10 w-px bg-border" />
             <div className="space-y-1 text-xs">
               <div className="flex items-center text-emerald-400 font-semibold gap-1">
-                <TrendingUp className="w-3.5 h-3.5" /> Trend Pozitiv
+                <TrendingUp className="w-3.5 h-3.5" /> Të Dhëna Live
               </div>
-              <div className="text-muted-foreground">Likuiditet i Qëndrueshëm</div>
+              <div className="text-muted-foreground">
+                {realStats.salesCount} Shitje | {realStats.totalProducts} Produkte
+              </div>
             </div>
           </div>
         </div>
 
-        {/* AI Actionable Insights Grid */}
+        {/* Actionable Insights Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 pt-5 border-t border-border/60">
           <div className="p-3.5 rounded-xl bg-accent/25 border border-border/60 flex items-start space-x-3">
             <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-bold text-foreground">Mundësi Rritjeje:</div>
-              <p className="text-xs text-muted-foreground mt-0.5">{aiAdvisor.top_opportunity}</p>
+              <div className="text-xs font-bold text-foreground">Statusi & Mundësitë:</div>
+              <p className="text-xs text-muted-foreground mt-0.5">{realStats.topOpportunity}</p>
             </div>
           </div>
 
@@ -208,7 +285,7 @@ export default function DashboardPage() {
             <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
             <div>
               <div className="text-xs font-bold text-foreground">Vëmendje Operative:</div>
-              <p className="text-xs text-muted-foreground mt-0.5">{aiAdvisor.top_warning}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{realStats.topWarning}</p>
             </div>
           </div>
         </div>

@@ -5,8 +5,25 @@ import { useBusinessMode, INDUSTRIES, BusinessType } from "./business-mode-provi
 import { ChevronDown, Check, Sparkles, Building2 } from "lucide-react"
 
 export function IndustrySelector() {
-  const { businessType, setBusinessType, currentIndustry } = useBusinessMode()
+  const { businessType, setBusinessType, currentIndustry, isLocked } = useBusinessMode()
   const [isOpen, setIsOpen] = useState(false)
+
+  if (isLocked) {
+    return (
+      <div 
+        className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-semibold shadow-xs select-none"
+        title={`Profili Zyrtar i Biznesit: ${currentIndustry.name}`}
+      >
+        <span className="text-base">{currentIndustry.icon}</span>
+        <div className="text-left hidden sm:block">
+          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider leading-none">
+            Profili Zyrtar
+          </div>
+          <div className="text-foreground font-bold mt-0.5">{currentIndustry.name}</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative">
