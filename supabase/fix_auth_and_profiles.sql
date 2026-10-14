@@ -3,6 +3,10 @@
 -- Ekzekutojeni këtë skript në Supabase SQL Editor
 -- ========================================================
 
+-- 0. Heqim çdo kufizim të vjetër të roleve që mund të bllokojë ekzekutimin
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.workers DROP CONSTRAINT IF EXISTS workers_role_check;
+
 -- 1. Sigurohu që tabela profiles ka të gjitha kolonat e nevojshme
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
