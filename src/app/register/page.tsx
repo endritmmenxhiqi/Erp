@@ -134,16 +134,45 @@ export default function RegisterPage() {
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true)
     try {
-      // Every registered business account is created as Administrator / Owner
-      const { error } = await supabase.auth.signUp({
-        email: values.email,
+      const cleanEmail = values.email.trim().toLowerCase()
+      const cleanFiscal = values.fiscal_number.trim()
+
+      // 1. Verifiko paraprakisht nëse emaili ekziston tashmë në profiles
+      const { data: existingEmail } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('email', cleanEmail)
+        .maybeSingle()
+
+      if (existingEmail) {
+        toast.error(`Emaili "${cleanEmail}" tashmë është i regjistruar në sistem. Ju lutem kyçuni me të ose përdorni një email tjetër.`)
+        setIsLoading(false)
+        return
+      }
+
+      // 2. Verifiko paraprakisht nëse numri fiskal ekziston tashmë në profiles
+      const { data: existingFiscal } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('fiscal_number', cleanFiscal)
+        .maybeSingle()
+
+      if (existingFiscal) {
+        toast.error(`Numri fiskal "${cleanFiscal}" tashmë është i regjistruar për një biznes tjetër. Ju lutem kontrolloni numrin tuaj fiskal.`)
+        setIsLoading(false)
+        return
+      }
+
+      // 3. Regjistro biznesin e ri në Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
         password: values.password,
         options: {
           data: {
-            business_name: values.business_name,
-            fiscal_number: values.fiscal_number,
-            address: values.address,
-            phone_number: values.phone_number,
+            business_name: values.business_name.trim(),
+            fiscal_number: cleanFiscal,
+            address: values.address.trim(),
+            phone_number: values.phone_number.trim(),
             business_type: selectedBusinessType,
             user_role: "owner", // Always Administrator / Owner
             role: "business_admin",
@@ -156,7 +185,23 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success(t("auth.success_register"))
+      // 4. Kontrollo nëse Supabase ktheu identitete boshe (që ndodh kur emaili ekziston në auth.users)
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        toast.error(`Ky email ("${cleanEmail}") ekziston tashmë në llogari. Nuk mund të regjistrohet përsëri me këtë email. Ju lutem kyçuni ose përdorni një email tjetër.`)
+        return
+      }
+
+      // 5. Nëse Supabase krijoi sesion të menjëhershëm (kur Confirm email është i çaktivizuar)
+      if (data?.session) {
+        toast.success("Mirësevini! Llogaria u krijua dhe u kyçët me sukses.")
+        router.push('/dashboard')
+        return
+      }
+
+      // 6. Nëse Supabase kërkon konfirmim me email
+      toast.success("Llogaria u krijua me sukses! Nëse nuk kyçeni dot menjëherë, ju lutem kontrolloni emailin tuaj për verifikim.", {
+        duration: 8000
+      })
       router.push('/login')
     } catch (err: unknown) {
       toast.error(t("auth.error_unexpected"))

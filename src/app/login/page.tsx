@@ -33,37 +33,69 @@ function LoginForm() {
 
   async function handleBusinessSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!fiscalNumber.trim() || !businessPassword.trim()) {
-      toast.error("Ju lutem plotësoni numrin fiskal dhe fjalëkalimin.")
+    const cleanInput = fiscalNumber.trim()
+    if (!cleanInput || !businessPassword.trim()) {
+      toast.error("Ju lutem plotësoni numrin fiskal / emailin dhe fjalëkalimin.")
       return
     }
 
     setIsLoading(true)
     try {
       StaffService.setCurrentWorker(null) // Clear any previous worker session
-      const { data: profile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('email, role')
-        .eq('fiscal_number', fiscalNumber.trim())
-        .single()
 
-      if (fetchError || !profile) {
-        toast.error(t("auth.error_fiscal"))
-        return
+      const isEmail = cleanInput.includes('@')
+      let targetEmail = cleanInput
+      let userRole = 'business_admin'
+
+      if (!isEmail) {
+        // Kërko profilin sipas numrit fiskal (ilike për mos të pasur problem me shkronja të mëdha/vogla)
+        const { data: profile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('email, role')
+          .ilike('fiscal_number', cleanInput)
+          .maybeSingle()
+
+        if (fetchError || !profile) {
+          toast.error("Numri fiskal nuk u gjet ose është i pasaktë. Ju lutem kontrolloni shifrat ose kyçuni me email.")
+          return
+        }
+
+        targetEmail = profile.email
+        userRole = profile.role || 'business_admin'
+      } else {
+        // Nëse u dha email, marrim rolin nga profili nëse ekziston
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .ilike('email', cleanInput)
+          .maybeSingle()
+
+        if (profile?.role) {
+          userRole = profile.role
+        }
       }
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
+        email: targetEmail,
         password: businessPassword,
       })
 
       if (signInError) {
-        toast.error(t("auth.error_password"))
+        const errMsg = signInError.message.toLowerCase()
+        if (errMsg.includes("email not confirmed")) {
+          toast.error("Emaili nuk është konfirmuar ende! Ju lutem kontrolloni kutinë tuaj postare (Inbox/Spam) ose kontaktoni administratorin.", {
+            duration: 8000,
+          })
+        } else if (errMsg.includes("invalid login credentials")) {
+          toast.error("Fjalëkalimi ose të dhënat e kyçjes janë të pasakta.")
+        } else {
+          toast.error(signInError.message || t("auth.error_password"))
+        }
         return
       }
 
       toast.success(t("auth.success_login"))
-      router.push(profile.role === 'admin' ? '/admin' : '/dashboard')
+      router.push(userRole === 'admin' ? '/admin' : '/dashboard')
     } catch (err: unknown) {
       toast.error(t("auth.error_unexpected"))
     } finally {
@@ -184,10 +216,10 @@ function LoginForm() {
           {loginType === "business" ? (
             <form onSubmit={handleBusinessSubmit} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground">{t("fiscal_number")}</label>
+                <label className="text-xs font-bold uppercase text-muted-foreground">{t("fiscal_number")} ose Email</label>
                 <Input 
                   type="text"
-                  placeholder="Psh. 600123456" 
+                  placeholder="Psh. 600123456 ose email@biznesi.com" 
                   className="h-12 bg-background/50 border-border focus:ring-primary/20" 
                   disabled={isLoading} 
                   value={fiscalNumber}
